@@ -406,7 +406,7 @@
 	"block.create.zinc_ore": "Minério de Zinco",
 
 	"entity.create.contraption": "Engenhoca",
-	"entity.create.seat": "Cadeira",
+	"entity.create.seat": "Assento",
 	"entity.create.stationary_contraption": "Engenhoca Fixa",
 	"entity.create.super_glue": "Super Cola",
 
@@ -1150,7 +1150,7 @@
 	"block.create.metal_bracket.tooltip": "SUPORTE DE METAL",
 	"block.create.metal_bracket.tooltip.summary": "_Decora_ seus _Eixos, Engrenagens_ e _Encanamentos_ com um reforço industrial e firme.",
 
-	"block.create.andesite_casing.tooltip": "INVÓLUCRO DE ANDESITO",
+	"block.create.andesite_casing.tooltip": "INVOLUCRO DE ANDESITO",
 	"block.create.andesite_casing.tooltip.summary": "Um invólucro de máquina simples com um variedade de usos. Seguro para decoração. Pode ser usado para _envolver Eixos_ e _Esteiras Mecânica._",
 
 	"block.create.andesite_funnel.tooltip": "FUNIL DE ANDESITO",
@@ -1183,54 +1183,54 @@
 	"block.create.brass_tunnel.tooltip.condition2": "Filtrando",
 	"block.create.brass_tunnel.tooltip.behaviour2": "_Túneis de Bronze_ vem com filtros para _Entrada_ e _Saída_. SE um _Item_ não é permitido pelo filtro de saída de um _Túnel_ ele será transferido para a saída de um _Túnel_ conectado.",
 	"block.create.brass_tunnel.tooltip.condition3": "Separando",
-	"block.create.brass_tunnel.tooltip.behaviour3": "_Túneis de Bronze_ podem ser configurados para mudar o método em que _Items_ são repassados para _Esteiras_ conectadas.",
+	"block.create.brass_tunnel.tooltip.behaviour3": "_Túneis de Bronze_ podem ser configurados para mudar o método em que _Itens_ são repassados para _Esteiras_ conectadas.",
 	"block.create.brass_tunnel.tooltip.control1": "B-Direito com Chave Inglesa no Lado",
-	"block.create.brass_tunnel.tooltip.action1": "UNLOCALIZED: _Adjusts window shutters_ if the tunnel has a window on that face.",
-	"block.create.brass_tunnel.tooltip.control2": "UNLOCALIZED: Scroll with Chave Inglesa on Top",
-	"block.create.brass_tunnel.tooltip.action2": "UNLOCALIZED: Change the splitting method of connected _Túnels_.",
+	"block.create.brass_tunnel.tooltip.action1": "_Ajusta venezianas_ se o túnel tiver uma janela nessa face.",
+	"block.create.brass_tunnel.tooltip.control2": "Role com a Chave Inglesa em Cima",
+	"block.create.brass_tunnel.tooltip.action2": "Muda o método de separação dos _Túneis_ conectados.",
 
-	"block.create.copper_casing.tooltip": "UNLOCALIZED: INVÓLUCRO DE COPPER",
-	"block.create.copper_casing.tooltip.summary": "UNLOCALIZED: Robust machine casing with a variety of uses. Safe for decoration.",
-	"block.create.copper_casing.tooltip.condition1": "UNLOCALIZED: When used on Encanamento",
-	"block.create.copper_casing.tooltip.behaviour1": "UNLOCALIZED: _Revestes_ the _Encanamento_ with the _Revestimento de Cobre_. Encanamento Revestidos will _lock their connections_ in place, no longer reacting to changes to neighbouring pipes.",
+	"block.create.copper_casing.tooltip": "INVOLUCRO DE COBRE",
+	"block.create.copper_casing.tooltip.summary": "Involucro de máquina robusto com uma variedade de usos. Seguro para decoração.",
+	"block.create.copper_casing.tooltip.condition1": "Quando usado em Encanamento",
+	"block.create.copper_casing.tooltip.behaviour1": "_Reveste_ o _Encanamento_ com o _Revestimento de Cobre_. Encanamento Revestidos irão _bloquear suas conexões_, não mais reagindo a mudanças em encanamentos vizinhos.",
 
-	"block.create.encased_fluid_pipe.tooltip": "UNLOCALIZED: REVESTIDO ENCANAMENTO",
-	"block.create.encased_fluid_pipe.tooltip.summary": "UNLOCALIZED: A _Encanamento_ encased with the _Revestimento de Cobre_.",
+	"block.create.encased_fluid_pipe.tooltip": "ENCANAMENTO REVESTIDO",
+	"block.create.encased_fluid_pipe.tooltip.summary": "Um _Encanamento_ revestido com _Revestimento de Cobre_.",
 
-	"block.create.copper_valve_handle.tooltip": "UNLOCALIZED: COPPER VALVE HANDLE",
-	"block.create.copper_valve_handle.tooltip.summary": "UNLOCALIZED: A precise _source_ of _Rotational Force_ that requires the interaction of players. Be careful not to wear yourself out!",
-	"block.create.copper_valve_handle.tooltip.condition1": "UNLOCALIZED: When Used",
-	"block.create.copper_valve_handle.tooltip.behaviour1": "UNLOCALIZED: Provides _Rotational Force_ to an attached contraption. _Sneak to reverse_ the rotation.",
+	"block.create.copper_valve_handle.tooltip": "VÁLVULA DE COBRE",
+	"block.create.copper_valve_handle.tooltip.summary": "Uma _fonte_ de _Força Rotacional_ precisa, que requer a interação de jogadores. Cuidado para não se esgotar!",
+	"block.create.copper_valve_handle.tooltip.condition1": "Quando Usado",
+	"block.create.copper_valve_handle.tooltip.behaviour1": "Provê _Força Rotacional_ para engenhocas conectadas. _Agache para reverter_ a rotação.",
 
-	"block.create.seat.tooltip": "UNLOCALIZED: SEAT",
-	"block.create.seat.tooltip.summary": "UNLOCALIZED: Sit yourself down and enjoy the ride! Will anchor a player onto a moving _contraption_. Great for static furniture too! Comes in a variety of colours.",
-	"block.create.seat.tooltip.condition1": "UNLOCALIZED: Right click on Cadeira",
-	"block.create.seat.tooltip.behaviour1": "UNLOCALIZED: Sits the player on the _Cadeira_. Press L-shift to leave the _Seat_.",
+	"block.create.seat.tooltip": "ASSENTO",
+	"block.create.seat.tooltip.summary": "Sente-se e aproveite a viajem! Irá vincular um jogador em uma engenhoca em movimento. Ótimo para mobília estática também! Vem em uma variedade de cores.",
+	"block.create.seat.tooltip.condition1": "B-Direito no Assento",
+	"block.create.seat.tooltip.behaviour1": "O jogador senta no _Assento_. Aperte Shift-Esquerdo para levantar do _Assento_.",
 
-	"block.create.chute.tooltip": "UNLOCALIZED: CHUTE",
-	"block.create.chute.tooltip.summary": "UNLOCALIZED: _Collect_ and transport items vertically or diagonally. Can both take and place items into _item containers_. You can also interact with chutes from the side using _hoppers_ or _mounted funnels_.",
-	"block.create.chute.tooltip.condition1": "UNLOCALIZED: When powered by a fan",
-	"block.create.chute.tooltip.behaviour1": "UNLOCALIZED: _Fan_ powered chutes can convey _Items_ upwards, and suck _items_ off of _Depósitos_ and _Esteiras_.",
+	"block.create.chute.tooltip": "CALHA",
+	"block.create.chute.tooltip.summary": "_Coleta_ e transporta itens verticalmente verticalmente no diagonalmente. Pode tanto pegar e colocar _contêineres de itens_. Você também pode interagir com calhas usando _funis_ ou _funis montados_.",
+	"block.create.chute.tooltip.condition1": "Quando ligado a um ventilador",
+	"block.create.chute.tooltip.behaviour1": "Calhas ligadas a _Ventiladores_ podem mover itens para cima, e sugar itens de _Depósitos_ e _Esteiras_.",
 
-	"block.create.depot.tooltip": "UNLOCALIZED: DEPOT",
-	"block.create.depot.tooltip.summary": "UNLOCALIZED: A handy location to place seu _Items_. Provides an interaction point for several machines",
-	"block.create.depot.tooltip.condition1": "UNLOCALIZED: Right Click on Depósito",
-	"block.create.depot.tooltip.behaviour1": "UNLOCALIZED: Places or takes an _Item_ from the _Depósito_. _Blocos_ and _Engenhocas_ that would interact with a _Esteira_ also work on a _Depósito_.",
+	"block.create.depot.tooltip": "DEPÓSITO",
+	"block.create.depot.tooltip.summary": "Um local bom para colocar seus _Itens_. Provê um ponto de interação para várias máquinas",
+	"block.create.depot.tooltip.condition1": "B-Direito no Depósito",
+	"block.create.depot.tooltip.behaviour1": "Coloca ou tira um _Item_ no _Depósito_. _Blocos_ e _Engenhocas_ que interagem com _Esteiras_ também funcionam com _Depósitos_.",
 
-	"item.create.blaze_cake.tooltip": "UNLOCALIZED: BLAZE CAKE",
-	"item.create.blaze_cake.tooltip.summary": "UNLOCALIZED: A Delicious treat for seu hard-working _Maçarico de Blazes_. Gets them all fired up!",
+	"item.create.blaze_cake.tooltip": "BOLO DE BLAZE",
+	"item.create.blaze_cake.tooltip.summary": "Uma guloseima deliciosa para o seu _Maçarico de Blaze_ trabalhador. Deixa eles cheios de energia!",
 
-	"item.create.empty_blaze_burner.tooltip": "UNLOCALIZED: EMPTY BLAZE BURNER",
-	"item.create.empty_blaze_burner.tooltip.summary": "UNLOCALIZED: A little iron home for seu fiery friends. I'm sure you could put them to good use.",
-	"item.create.empty_blaze_burner.tooltip.condition1": "UNLOCALIZED: When used on a Blaze or Blaze spawner",
-	"item.create.empty_blaze_burner.tooltip.behaviour1": "UNLOCALIZED: _Captures_ a Blaze in the item",
+	"item.create.empty_blaze_burner.tooltip": "MAÇARICO DE BLAZE VAZIO",
+	"item.create.empty_blaze_burner.tooltip.summary": "Uma pequena casa de ferro para os seus amigos esquentadinhos. Tenho certeza que irá colocá-los em bom uso.",
+	"item.create.empty_blaze_burner.tooltip.condition1": "Quando usado em um Blaze ou Gerador de Blazes",
+	"item.create.empty_blaze_burner.tooltip.behaviour1": "_Captures_ um Blaze no seu item",
 
-	"block.create.fluid_pipe.tooltip": "UNLOCALIZED: ENCANAMENTO",
-	"block.create.fluid_pipe.tooltip.summary": "UNLOCALIZED: Used for moving _fluids_ around. Needs a _Bomba Mecânica_ to get the _fluid_ moving.",
-	"block.create.fluid_pipe.tooltip.condition1": "UNLOCALIZED: Fluid Transfer",
-	"block.create.fluid_pipe.tooltip.behaviour1": "UNLOCALIZED: Can connect to _fluid containers_ such as _Tanks_ or _Bacias_. Exposed _pipe_ ends can also drain or place fluid blocks. Be careful of leaks!",
-	"block.create.fluid_pipe.tooltip.control1": "UNLOCALIZED: Right-clicked with Chave Inglesa",
-	"block.create.fluid_pipe.tooltip.action1": "UNLOCALIZED: Places a window on the pipe if available",
+	"block.create.fluid_pipe.tooltip": "ENCANAMENTO",
+	"block.create.fluid_pipe.tooltip.summary": "Usa para mover _fluidos_. Precisa de uma _Bomba Mecânica_ para mover o _fluido_.",
+	"block.create.fluid_pipe.tooltip.condition1": "Transferência de Fluidos",
+	"block.create.fluid_pipe.tooltip.behaviour1": "Pode se conectar a _contêineres de fluidos_ como _Tanques_ e _Bacias_. Bocas de _encanamentos_ expostos podem drenar ou inundar com fluidos. Cuidado com vazamentos!",
+	"block.create.fluid_pipe.tooltip.control1": "B-Direito com Chave Inglesa",
+	"block.create.fluid_pipe.tooltip.action1": "Coloca uma janela no encanamento se possível",
 
 	"block.create.hose_pulley.tooltip": "UNLOCALIZED: HOSE PULLEY",
 	"block.create.hose_pulley.tooltip.summary": "UNLOCALIZED: Used for _placing_ or _draining_ large _fluid bodies_ in the world.",
@@ -1243,14 +1243,14 @@
 
 	"block.create.fluid_tank.tooltip": "UNLOCALIZED: TANQUE DE FLUIDOS",
 	"block.create.fluid_tank.tooltip.summary": "UNLOCALIZED: _Stores_ all seu favourite _fluids_. Scales in width and height.",
-	"block.create.fluid_tank.tooltip.condition1": "UNLOCALIZED: Right-clicked with Chave Inglesa",
+	"block.create.fluid_tank.tooltip.condition1": "UNLOCALIZED: B-Direito com Chave Inglesa",
 	"block.create.fluid_tank.tooltip.behaviour1": "UNLOCALIZED: Changes the optional window",
 
 	"block.create.creative_fluid_tank.tooltip": "UNLOCALIZED: TANQUE DE FLUIDOS CRIATIVO",
 	"block.create.creative_fluid_tank.tooltip.summary": "UNLOCALIZED: This _Tanque de Fluidos_ allows infinite replication of any Fluid. Scales in width and height.",
 	"block.create.creative_fluid_tank.tooltip.condition1": "UNLOCALIZED: When Fluid in Tank",
 	"block.create.creative_fluid_tank.tooltip.behaviour1": "UNLOCALIZED: Anything _extracting_ from this tank will provide an _endless supply_ of the fluid specified. Fluids _inserted_ into this tank will be _voided._",
-	"block.create.creative_fluid_tank.tooltip.condition2": "UNLOCALIZED: Right-clicked with Chave Inglesa",
+	"block.create.creative_fluid_tank.tooltip.condition2": "UNLOCALIZED: B-Direito com Chave Inglesa",
 	"block.create.creative_fluid_tank.tooltip.behaviour2": "UNLOCALIZED: Changes the optional window",
 
 	"block.create.fluid_valve.tooltip": "UNLOCALIZED: FLUID VALVE",
@@ -1262,7 +1262,7 @@
 	"block.create.mechanical_pump.tooltip.summary": "UNLOCALIZED: Takes _rotational force_ and uses it to move _fluid_ along a _pipe_. Has a maximum range of effect in both directions. (16 blocks by default)",
 	"block.create.mechanical_pump.tooltip.condition1": "UNLOCALIZED: Fluid Flow",
 	"block.create.mechanical_pump.tooltip.behaviour1": "UNLOCALIZED: Applied _rotational force_ creates pressure that forces _fluid_ through the _pipe_ network. Reverse the direction of the _rotational force_ to switch the direction that the _fluid_ flows.",
-	"block.create.mechanical_pump.tooltip.control1": "UNLOCALIZED: Right-clicked with Chave Inglesa",
+	"block.create.mechanical_pump.tooltip.control1": "UNLOCALIZED: B-Direito com Chave Inglesa",
 	"block.create.mechanical_pump.tooltip.action1": "UNLOCALIZED: Reverses the direction of the _pump_, switching the default direction of the flow",
 
 	"block.create.smart_fluid_pipe.tooltip": "UNLOCALIZED: SMART ENCANAMENTO",
@@ -1319,7 +1319,7 @@
 	"item.create.handheld_worldshaper.tooltip.action1": "UNLOCALIZED: Sets blocks placed by the tool to the targeted block.",
 	"item.create.handheld_worldshaper.tooltip.control2": "UNLOCALIZED: B-Direito at Bloco",
 	"item.create.handheld_worldshaper.tooltip.action2": "UNLOCALIZED: Applies the currently selected _Brush_ and _Tool_ at the targeted location.",
-	"item.create.handheld_worldshaper.tooltip.control3": "UNLOCALIZED: B-Direito while Sneaking",
+	"item.create.handheld_worldshaper.tooltip.control3": "UNLOCALIZED: B-Direito while Agacheing",
 	"item.create.handheld_worldshaper.tooltip.action3": "UNLOCALIZED: Opens the _Configuration Interface_",
 
 	"item.create.tree_fertilizer.tooltip": "FERTILIZANTE DE ARVORE",
@@ -1435,11 +1435,11 @@
 	"item.create.wrench.tooltip.summary": "UNLOCALIZED: A useful tool for working on kinetic contraptions. Can be used to _Rotate_, _Dismantle_ and to _Configure_ components.",
 	"item.create.wrench.tooltip.control1": "UNLOCALIZED: Right-Click a kinetic block",
 	"item.create.wrench.tooltip.action1": "UNLOCALIZED: _Rotates components_ toward or away from the face with which you interacted.",
-	"item.create.wrench.tooltip.control2": "UNLOCALIZED: B-Direito while Sneaking",
+	"item.create.wrench.tooltip.control2": "UNLOCALIZED: B-Direito while Agacheing",
 	"item.create.wrench.tooltip.action2": "UNLOCALIZED: _Disassembles Kinetic components_ and places them back in _your inventory_.",
 
 	"block.create.creative_motor.tooltip": "UNLOCALIZED: CREATIVE MOTOR",
-	"block.create.creative_motor.tooltip.summary": "UNLOCALIZED: A configurable source of _Rotational Force_.",
+	"block.create.creative_motor.tooltip.summary": "UNLOCALIZED: A configurable source of _Força Rotacional_.",
 
 	"block.create.water_wheel.tooltip": "RODA DE ÁGUA",
 	"block.create.water_wheel.tooltip.summary": "Prove _Força_ _Rotacional_ tirada de _Correntes_ de _Água_ próximas.",
@@ -1457,9 +1457,9 @@
 	"block.create.nozzle.tooltip.summary": "UNLOCALIZED: Attach to the front of an _Revestido Fan_ to distribute its effect on Entities in _all directions_.",
 
 	"block.create.hand_crank.tooltip": "UNLOCALIZED: HAND CRANK",
-	"block.create.hand_crank.tooltip.summary": "UNLOCALIZED: A simple _source_ of _Rotational Force_ that requires the interaction of players. Be careful not to wear yourself out!",
-	"block.create.hand_crank.tooltip.condition1": "UNLOCALIZED: When Used",
-	"block.create.hand_crank.tooltip.behaviour1": "UNLOCALIZED: Provides _Rotational Force_ to an attached contraption. _Sneak to reverse_ the rotation.",
+	"block.create.hand_crank.tooltip.summary": "UNLOCALIZED: A simple _source_ of _Força Rotacional_ that requires the interaction of players. Be careful not to wear yourself out!",
+	"block.create.hand_crank.tooltip.condition1": "UNLOCALIZED: Quando Usado",
+	"block.create.hand_crank.tooltip.behaviour1": "UNLOCALIZED: Provides _Força Rotacional_ to an attached contraption. _Agache to reverse_ the rotation.",
 
 	"block.create.cuckoo_clock.tooltip": "UNLOCALIZED: CUCKOO CLOCK",
 	"block.create.cuckoo_clock.tooltip.summary": "UNLOCALIZED: Fine craftsmanship for _decorating_ a space and _keeping track of time_.",
@@ -1506,7 +1506,7 @@
 	"block.create.reinforced_rail.tooltip.summary": "UNLOCALIZED: A timber stabilized rail, _does not need supports_.",
 
 	"block.create.mechanical_mixer.tooltip": "UNLOCALIZED: MIXER MECÂNICO",
-	"block.create.mechanical_mixer.tooltip.summary": "UNLOCALIZED: A kinetic whisk providing automated shapeless crafting recipes of multiple ingredients. Requires constant _Rotational Force_ and a _Bacia_ placed below (with a gap in between).",
+	"block.create.mechanical_mixer.tooltip.summary": "UNLOCALIZED: A kinetic whisk providing automated shapeless crafting recipes of multiple ingredients. Requires constant _Força Rotacional_ and a _Bacia_ placed below (with a gap in between).",
 	"block.create.mechanical_mixer.tooltip.condition1": "UNLOCALIZED: When above Bacia",
 	"block.create.mechanical_mixer.tooltip.behaviour1": "UNLOCALIZED: Starts to mix items in the basin whenever all necessary ingredients are present. To prevent unwanted recipes, use the filter slot on the basin or cut the rotational force until all desired ingredients have been added.",
 
@@ -1529,7 +1529,7 @@
 	"block.create.flywheel.tooltip": "UNLOCALIZED: VOLANTE",
 	"block.create.flywheel.tooltip.summary": "UNLOCALIZED: A large metal wheel to _harness and stabilize_ generated force by an _attached Engine_. Volantes connect to engines if they are _1m apart_ and at a _90° Angle_ from each other.",
 	"block.create.flywheel.tooltip.condition1": "UNLOCALIZED: When Attached to Running Engine",
-	"block.create.flywheel.tooltip.behaviour1": "UNLOCALIZED: Provides _Rotational Force_ to a connected contraption based on the generator's strength and speed.",
+	"block.create.flywheel.tooltip.behaviour1": "UNLOCALIZED: Provides _Força Rotacional_ to a connected contraption based on the generator's strength and speed.",
 
 	"block.create.portable_storage_interface.tooltip": "UNLOCALIZED: PORTABLE STORAGE INTERFACE",
 	"block.create.portable_storage_interface.tooltip.summary": "UNLOCALIZED: A portable interchange point for _moving items_ to and from a _structure_ moved by a piston, bearing, minecart, or pulley. Two meeting interfaces have to _face each other_ and be spaced _1-2 blocks apart_.",
@@ -1566,16 +1566,16 @@
 	"block.create.mechanical_bearing.tooltip.behaviour1": "Começa a rotacionar _Chassis_ de _Rotação_ conectados e blocos conectados a eles.",
 
 	"block.create.windmill_bearing.tooltip": "UNLOCALIZED: WINDMILL BEARING",
-	"block.create.windmill_bearing.tooltip.summary": "UNLOCALIZED: Used for harnessing _Rotational Force_ from wind. Attach seu own design and watch it spin!",
+	"block.create.windmill_bearing.tooltip.summary": "UNLOCALIZED: Used for harnessing _Força Rotacional_ from wind. Attach seu own design and watch it spin!",
 	"block.create.windmill_bearing.tooltip.condition1": "UNLOCALIZED: When Right-clicked",
-	"block.create.windmill_bearing.tooltip.behaviour1": "UNLOCALIZED: Starts providing _Rotational Force_ generated from the rotation of its attached structure. The Structure has to include suitable _Velas Blocos_ or _Wool_. Use _Chassis_, _Slime_ or _Super Cola_ to move more than a single block.",
+	"block.create.windmill_bearing.tooltip.behaviour1": "UNLOCALIZED: Starts providing _Força Rotacional_ generated from the rotation of its attached structure. The Structure has to include suitable _Velas Blocos_ or _Wool_. Use _Chassis_, _Slime_ or _Super Cola_ to move more than a single block.",
 
 	"block.create.sail_frame.tooltip": "UNLOCALIZED: VELAS FRAME",
 	"block.create.sail_frame.tooltip.summary": "UNLOCALIZED: A useful building block and source of kinetic energy when part of a structure mounted onto a _Rolamento de Moinho de Vento_.",
 
 	"block.create.white_sail.tooltip": "UNLOCALIZED: VELAS",
 	"block.create.white_sail.tooltip.summary": "UNLOCALIZED: A useful building block and source of kinetic energy when part of a structure mounted onto a _Rolamento de Moinho de Vento_. Comes in a variety of colours.",
-	"block.create.white_sail.tooltip.condition1": "UNLOCALIZED: When Right-clicked with Dye",
+	"block.create.white_sail.tooltip.condition1": "UNLOCALIZED: When B-Direito com Dye",
 	"block.create.white_sail.tooltip.behaviour1": "UNLOCALIZED: Changes color of the velas.",
 
 	"block.create.clockwork_bearing.tooltip": "UNLOCALIZED: CLOCKWORK BEARING",
@@ -1606,7 +1606,7 @@
 	"block.create.cart_assembler.tooltip.action4": "UNLOCALIZED: _Disassembles_ carts when powered.",
 
 	"block.create.rope_pulley.tooltip": "UNLOCALIZED: ROPE PULLEY",
-	"block.create.rope_pulley.tooltip.summary": "UNLOCALIZED: Moves attached _blocks_ and _structures vertically_. Use _Chassis_, _Slime_ or _Super Cola_ to move more than a single block.",
+	"block.create.rope_pulley.tooltip.summary": "UNLOCALIZED: Moves attached _blocks_ and _structures verticalmente_. Use _Chassis_, _Slime_ or _Super Cola_ to move more than a single block.",
 	"block.create.rope_pulley.tooltip.condition1": "UNLOCALIZED: When Powered by Kinetics",
 	"block.create.rope_pulley.tooltip.behaviour1": "UNLOCALIZED: Starts moving the attached structure. Speed and direction correlate to the incoming Rotation Speed.",
 
@@ -1663,7 +1663,7 @@
 	"block.create.stockpile_switch.tooltip.behaviour1": "Para de enviar _Sinal_ de _Redstone_",
 
 	"block.create.content_observer.tooltip": "UNLOCALIZED: CONTENT OBSERVER",
-	"block.create.content_observer.tooltip.summary": "UNLOCALIZED: _Detects Items_ inside _containers_ and _conveyors_ matching a configured _filter_. While the observed _inventory_, _belt_ or _chute contains_ a matching item, this component will emit a _Redstone Signal_. When an observed _funnel transfers_ a matching item, this component will emit a _Redstone Pulse_.",
+	"block.create.content_observer.tooltip.summary": "UNLOCALIZED: _Detects Itens_ inside _containers_ and _conveyors_ matching a configured _filter_. While the observed _inventory_, _belt_ or _chute contains_ a matching item, this component will emit a _Redstone Signal_. When an observed _funnel transfers_ a matching item, this component will emit a _Redstone Pulse_.",
 
 	"block.create.redstone_link.tooltip": "CONEXÃO DE REDSTONE",
 	"block.create.redstone_link.tooltip.summary": "Saida para conexões _Redstone_ _Sem-Fio._ Pode ter _Frequências_ usando qualquer item. Distancia do Sinal é limitada, mas resoavelmente justa.",
@@ -1696,7 +1696,7 @@
 	"block.create.creative_crate.tooltip": "CAIXOTE CRIATIVO",
 	"block.create.creative_crate.tooltip.summary": "Provê um suprimento infinito de blocos para _Esquemacannons_ próximos",
 	"block.create.creative_crate.tooltip.condition1": "UNLOCALIZED: When Item in Filter Slot",
-	"block.create.creative_crate.tooltip.behaviour1": "UNLOCALIZED: Anything _extracting_ from this container will provide an _endless supply_ of the item specified. Items _inserted_ into this crate will be _voided._",
+	"block.create.creative_crate.tooltip.behaviour1": "UNLOCALIZED: Anything _extracting_ from this container will provide an _endless supply_ of the item specified. Itens _inserted_ into this crate will be _voided._",
 
 	"block.create.deployer.tooltip": "UNLOCALIZED: DEPLOYER",
 	"block.create.deployer.tooltip.summary": "UNLOCALIZED: _Punches_, _Uses_, and _Activates_. This machine will try to _imitate_ a _player_ as a much as possible. Can _Take_ and _Deposit items_ to its own _Inventory_. Held items have to be _inserted_ and _extracted_ from the block directly.",
@@ -1705,9 +1705,9 @@
 	"block.create.deployer.tooltip.condition2": "UNLOCALIZED: B-Direitoed with Chave Inglesa",
 	"block.create.deployer.tooltip.behaviour2": "UNLOCALIZED: Toggles punch mode. In _punch mode_, the Deployer will attempt to use its item to _break blocks_ or _hurt entities_.",
 	"block.create.deployer.tooltip.condition3": "UNLOCALIZED: When Filter assigned",
-	"block.create.deployer.tooltip.behaviour3": "UNLOCALIZED: Deployer will not activate unless held item _matches_ the _filter._ Items not matching não pode ser inserted; Held items matching the filter não pode ser extracted.",
+	"block.create.deployer.tooltip.behaviour3": "UNLOCALIZED: Deployer will not activate unless held item _matches_ the _filter._ Itens not matching não pode ser inserted; Held items matching the filter não pode ser extracted.",
 
-	"block.create.brass_casing.tooltip": "UNLOCALIZED: INVÓLUCRO DE COBRE",
+	"block.create.brass_casing.tooltip": "UNLOCALIZED: INVOLUCRO DE COBRE",
 	"block.create.brass_casing.tooltip.summary": "UNLOCALIZED: Sturdy machine casing with a variety of uses. Safe for decoration. Can be used to _encase Eixos_ and _Esteiras Mecânica._",
 
 	"block.create.pulse_repeater.tooltip": "REPETIDOR DE PULSO",
@@ -1745,12 +1745,12 @@
 
 	"item.create.sand_paper.tooltip": "UNLOCALIZED: SAND PAPER",
 	"item.create.sand_paper.tooltip.summary": "UNLOCALIZED: A rough paper that pode ser used to _polish materials_. Can be automatically applied using the Deployer.",
-	"item.create.sand_paper.tooltip.condition1": "UNLOCALIZED: When Used",
+	"item.create.sand_paper.tooltip.condition1": "UNLOCALIZED: Quando Usado",
 	"item.create.sand_paper.tooltip.behaviour1": "UNLOCALIZED: Applies polish to items held in the _offhand_ or lying on the _floor_ when _looking at them_",
 
 	"item.create.super_glue.tooltip": "UNLOCALIZED: SUPER GLUE",
 	"item.create.super_glue.tooltip.summary": "UNLOCALIZED: Glue a block to another, and they will forever be inseparable.",
-	"item.create.super_glue.tooltip.condition1": "UNLOCALIZED: When Used",
+	"item.create.super_glue.tooltip.condition1": "UNLOCALIZED: Quando Usado",
 	"item.create.super_glue.tooltip.behaviour1": "UNLOCALIZED: Makes the _clicked face_ of a block _sticky_. Blocos attached to sticky faces will be _dragged along_ when moved by _mechanical pistons_, _bearings_ and other controllers.",
 	"item.create.super_glue.tooltip.condition2": "UNLOCALIZED: When Held in Offhand",
 	"item.create.super_glue.tooltip.behaviour2": "UNLOCALIZED: _Automatically attaches_ blocks placed from the main hand to the _side_ they were _placed against._",
@@ -1766,7 +1766,7 @@
 
 	"item.create.minecart_coupling.tooltip": "UNLOCALIZED: CARRINHO DE MINA COUPLING",
 	"item.create.minecart_coupling.tooltip.summary": "UNLOCALIZED: _Chains_ all seu _Carrinhos de mina_ or _Carriage Engenhocas_ together to form a majestic Train.",
-	"item.create.minecart_coupling.tooltip.condition1": "UNLOCALIZED: When Used on Carrinho de mina",
+	"item.create.minecart_coupling.tooltip.condition1": "UNLOCALIZED: Quando Usado on Carrinho de mina",
 	"item.create.minecart_coupling.tooltip.behaviour1": "UNLOCALIZED: _Couples_ two Carrinhos de mina together, attempting to keep them at a _constant distance_ while moving.",
 
 	"item.create.crafter_slot_cover.tooltip": "UNLOCALIZED: SLOT COVER",
