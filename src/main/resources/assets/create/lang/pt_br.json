@@ -1335,12 +1335,12 @@
 	"item.create.extendo_grip.tooltip.condition1": "Quando na Mão Secundária",
 	"item.create.extendo_grip.tooltip.behaviour1": "Aumenta o _alcance_ dos itens usados na _Mão Principal_.",
 
-	"item.create.filter.tooltip": "UNLOCALIZED: FILTER",
-	"item.create.filter.tooltip.summary": "UNLOCALIZED: _Controls outputs_ and _inputs_ of logistical devices with more _precision_, matching them against a _set of items_ or several _nested filters_.",
-	"item.create.filter.tooltip.condition1": "UNLOCALIZED: When in filter slot",
-	"item.create.filter.tooltip.behaviour1": "UNLOCALIZED: _Controls_ item flow according to its _configuration_.",
-	"item.create.filter.tooltip.condition2": "UNLOCALIZED: When B-Direitoed",
-	"item.create.filter.tooltip.behaviour2": "UNLOCALIZED: Opens the _configuration interface_.",
+	"item.create.filter.tooltip": "FILTRO",
+	"item.create.filter.tooltip.summary": "_Controla saídas_ e _entradas_ de dispositivos lógicos com mais _precisão_, comparando o filtro cobra _conjuntos de itens_ ou vários _filtros combinados_.",
+	"item.create.filter.tooltip.condition1": "Quando no slot de filtro",
+	"item.create.filter.tooltip.behaviour1": "_Controla_ o fluxo de itens conforme sua _configuração_.",
+	"item.create.filter.tooltip.condition2": "Quando clicado com B-Direito",
+	"item.create.filter.tooltip.behaviour2": "Abre a _interface de configuração_.",
 
 	"item.create.attribute_filter.tooltip": "UNLOCALIZED: ATTRIBUTE FILTER",
 	"item.create.attribute_filter.tooltip.summary": "UNLOCALIZED: _Controls outputs_ and _inputs_ of logistical devices with more _precision_, matching them against a _set of_ item _attributes_ and _categories_.",
