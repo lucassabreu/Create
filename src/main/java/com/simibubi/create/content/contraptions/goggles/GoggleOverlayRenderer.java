@@ -8,6 +8,7 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.CreateClient;
+import com.simibubi.create.content.contraptions.components.structureMovement.IDisplayAssemblyExceptions;
 import com.simibubi.create.content.contraptions.components.structureMovement.piston.MechanicalPistonBlock;
 import com.simibubi.create.content.contraptions.components.structureMovement.piston.PistonExtensionPoleBlock;
 import com.simibubi.create.foundation.config.AllConfigs;
@@ -17,6 +18,7 @@ import com.simibubi.create.foundation.utility.Iterate;
 import com.simibubi.create.foundation.utility.Lang;
 import com.simibubi.create.foundation.utility.outliner.Outline;
 import com.simibubi.create.foundation.utility.outliner.Outliner.OutlineEntry;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
@@ -92,6 +94,14 @@ public class GoggleOverlayRenderer {
 				tooltip.remove(tooltip.size() - 1);
 		}
 
+		if (te instanceof IDisplayAssemblyExceptions) {
+			boolean exceptionAdded = ((IDisplayAssemblyExceptions) te).addExceptionToTooltip(tooltip);
+			if (exceptionAdded) {
+				hasHoveringInformation = true;
+				hoverAddedInformation = true;
+			}
+		}
+
 		// break early if goggle or hover returned false when present
 		if ((hasGoggleInformation && !goggleAddedInformation) && (hasHoveringInformation && !hoverAddedInformation))
 			return;
@@ -131,15 +141,11 @@ public class GoggleOverlayRenderer {
 				.getScaledHeight());
 		int posX = tooltipScreen.width / 2 + AllConfigs.CLIENT.overlayOffsetX.get();
 		int posY = tooltipScreen.height / 2 + AllConfigs.CLIENT.overlayOffsetY.get();
-		// tooltipScreen.renderTooltip(tooltip, tooltipScreen.width / 2,
-		// tooltipScreen.height / 2);
 		tooltipScreen.renderTooltip(ms, tooltip, posX, posY);
 
 		ItemStack item = AllItems.GOGGLES.asStack();
-		// GuiGameElement.of(item).at(tooltipScreen.width / 2 + 10, tooltipScreen.height
-		// / 2 - 16).render();
 		GuiGameElement.of(item)
-			.atLocal(posX + 10, posY, 450)
+			.at(posX + 10, posY - 16, 450)
 			.render(ms);
 		ms.pop();
 	}

@@ -6,8 +6,10 @@ import java.util.List;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.foundation.gui.widgets.AbstractSimiWidget;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.Widget;
+import net.minecraft.client.util.InputMappings;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -33,32 +35,51 @@ public abstract class AbstractSimiScreen extends Screen {
 
 	@Override
 	public void render(MatrixStack ms, int mouseX, int mouseY, float partialTicks) {
-		renderBackground(ms);
+		partialTicks = partialTicks == 10 ? 0
+			: Minecraft.getInstance()
+				.getRenderPartialTicks();
+
+		ms.push();
+
+		renderWindowBackground(ms, mouseX, mouseY, partialTicks);
 		renderWindow(ms, mouseX, mouseY, partialTicks);
 		for (Widget widget : widgets)
 			widget.render(ms, mouseX, mouseY, partialTicks);
 		renderWindowForeground(ms, mouseX, mouseY, partialTicks);
 		for (Widget widget : widgets)
 			widget.renderToolTip(ms, mouseX, mouseY);
+
+		ms.pop();
+	}
+
+	protected void renderWindowBackground(MatrixStack ms, int mouseX, int mouseY, float partialTicks) {
+		renderBackground(ms);
 	}
 
 	@Override
 	public boolean mouseClicked(double x, double y, int button) {
 		boolean result = false;
-		for (Widget widget : widgets) {
+		for (Widget widget : widgets)
 			if (widget.mouseClicked(x, y, button))
 				result = true;
-		}
 		return result;
 	}
 
 	@Override
 	public boolean keyPressed(int code, int p_keyPressed_2_, int p_keyPressed_3_) {
-		for (Widget widget : widgets) {
+		for (Widget widget : widgets)
 			if (widget.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_))
 				return true;
+		
+		if (super.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_))
+			return true;
+
+		InputMappings.Input mouseKey = InputMappings.getInputByCode(code, p_keyPressed_2_);
+		if (this.client.gameSettings.keyBindInventory.isActiveAndMatches(mouseKey)) {
+			this.onClose();
+			return true;
 		}
-		return super.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_);
+		return false;
 	}
 
 	@Override
@@ -67,8 +88,6 @@ public abstract class AbstractSimiScreen extends Screen {
 			if (widget.charTyped(character, code))
 				return true;
 		}
-		if (character == 'e')
-			onClose();
 		return super.charTyped(character, code);
 	}
 
@@ -80,7 +99,7 @@ public abstract class AbstractSimiScreen extends Screen {
 		}
 		return super.mouseScrolled(mouseX, mouseY, delta);
 	}
-	
+
 	@Override
 	public boolean mouseReleased(double x, double y, int button) {
 		boolean result = false;
@@ -107,7 +126,7 @@ public abstract class AbstractSimiScreen extends Screen {
 		for (Widget widget : widgets) {
 			if (!widget.isHovered())
 				continue;
-			
+
 			if (widget instanceof AbstractSimiWidget && !((AbstractSimiWidget) widget).getToolTip().isEmpty()) {
 				renderTooltip(ms, ((AbstractSimiWidget) widget).getToolTip(), mouseX, mouseY);
 			}

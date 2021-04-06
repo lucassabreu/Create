@@ -1,9 +1,13 @@
 package com.simibubi.create.content.contraptions.components.actors;
 
+import javax.annotation.Nullable;
+
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.content.contraptions.components.structureMovement.MovementContext;
+import com.simibubi.create.content.contraptions.components.structureMovement.render.ActorInstance;
+import com.simibubi.create.content.contraptions.components.structureMovement.render.ContraptionKineticRenderer;
+import com.simibubi.create.foundation.render.backend.FastRenderDispatcher;
 import com.simibubi.create.foundation.utility.VecHelper;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.util.DamageSource;
@@ -31,7 +35,19 @@ public class DrillMovementBehaviour extends BlockBreakingMovementBehaviour {
 	@OnlyIn(value = Dist.CLIENT)
 	public void renderInContraption(MovementContext context, MatrixStack ms, MatrixStack msLocal,
 		IRenderTypeBuffer buffer) {
-		DrillRenderer.renderInContraption(context, ms, msLocal, buffer);
+		if (!FastRenderDispatcher.available())
+			DrillRenderer.renderInContraption(context, ms, msLocal, buffer);
+	}
+
+	@Override
+	public boolean hasSpecialInstancedRendering() {
+		return true;
+	}
+
+	@Nullable
+	@Override
+	public ActorInstance createInstance(ContraptionKineticRenderer kr, MovementContext context) {
+		return new DrillActorInstance(kr, context);
 	}
 
 	@Override

@@ -1,11 +1,13 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.bearing;
 
-import com.simibubi.create.content.contraptions.components.structureMovement.AllContraptionTypes;
+import com.simibubi.create.content.contraptions.components.structureMovement.AssemblyException;
 import com.simibubi.create.content.contraptions.components.structureMovement.Contraption;
+import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionLighter;
+import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionType;
+import com.simibubi.create.content.contraptions.components.structureMovement.NonStationaryLighter;
 
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.Direction;
-import net.minecraft.util.Direction.Axis;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
@@ -20,25 +22,24 @@ public class StabilizedContraption extends Contraption {
 	}
 
 	@Override
-	public boolean assemble(World world, BlockPos pos) {
+	public boolean assemble(World world, BlockPos pos) throws AssemblyException {
 		BlockPos offset = pos.offset(facing);
 		if (!searchMovedStructure(world, offset, null))
 			return false;
 		startMoving(world);
-		expandBoundsAroundAxis(Axis.Y);
 		if (blocks.isEmpty())
 			return false;
 		return true;
 	}
-	
+
 	@Override
 	protected boolean isAnchoringBlockAt(BlockPos pos) {
 		return false;
 	}
 
 	@Override
-	protected AllContraptionTypes getType() {
-		return AllContraptionTypes.STABILIZED;
+	protected ContraptionType getType() {
+		return ContraptionType.STABILIZED;
 	}
 	
 	@Override
@@ -55,7 +56,7 @@ public class StabilizedContraption extends Contraption {
 	}
 	
 	@Override
-	protected boolean canAxisBeStabilized(Axis axis) {
+	public boolean canBeStabilized(Direction facing, BlockPos localPos) {
 		return false;
 	}
 	
@@ -63,4 +64,8 @@ public class StabilizedContraption extends Contraption {
 		return facing;
 	}
 
+	@Override
+	public ContraptionLighter<?> makeLighter() {
+		return new NonStationaryLighter<>(this);
+	}
 }

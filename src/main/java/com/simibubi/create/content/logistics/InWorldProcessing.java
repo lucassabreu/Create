@@ -1,25 +1,5 @@
 package com.simibubi.create.content.logistics;
 
-import static com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock.getHeatLevelOf;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
-
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllRecipeTypes;
-import com.simibubi.create.content.contraptions.components.fan.SplashingRecipe;
-import com.simibubi.create.content.contraptions.processing.ProcessingRecipe;
-import com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock;
-import com.simibubi.create.content.contraptions.relays.belt.transport.TransportedItemStack;
-import com.simibubi.create.foundation.config.AllConfigs;
-import com.simibubi.create.foundation.item.ItemHelper;
-import com.simibubi.create.foundation.tileEntity.behaviour.belt.TransportedItemStackHandlerBehaviour.TransportedResult;
-import com.simibubi.create.foundation.utility.ColorHelper;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -36,6 +16,7 @@ import net.minecraft.item.crafting.SmokingRecipe;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.particles.RedstoneParticleData;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tileentity.BlastFurnaceTileEntity;
 import net.minecraft.tileentity.FurnaceTileEntity;
 import net.minecraft.tileentity.SmokerTileEntity;
@@ -46,6 +27,24 @@ import net.minecraft.world.World;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.wrapper.RecipeWrapper;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nullable;
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.AllRecipeTypes;
+import com.simibubi.create.content.contraptions.components.fan.SplashingRecipe;
+import com.simibubi.create.content.contraptions.processing.ProcessingRecipe;
+import com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock;
+import com.simibubi.create.content.contraptions.relays.belt.transport.TransportedItemStack;
+import com.simibubi.create.foundation.config.AllConfigs;
+import com.simibubi.create.foundation.item.ItemHelper;
+import com.simibubi.create.foundation.tileEntity.behaviour.belt.TransportedItemStackHandlerBehaviour.TransportedResult;
+import com.simibubi.create.foundation.utility.ColorHelper;
+
+import static com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock.getHeatLevelOf;
 
 public class InWorldProcessing {
 
@@ -58,7 +57,7 @@ public class InWorldProcessing {
 	public static SplashingInv splashingInv = new SplashingInv();
 
 	public enum Type {
-		SMOKING, BLASTING, SPLASHING
+		SMOKING, BLASTING, SPLASHING, NONE
 
 		;
 
@@ -69,12 +68,12 @@ public class InWorldProcessing {
 				return Type.SPLASHING;
 			Block block = blockState.getBlock();
 			if (block == Blocks.FIRE || AllBlocks.LIT_BLAZE_BURNER.has(blockState)
-				|| (block == Blocks.CAMPFIRE && blockState.get(CampfireBlock.LIT))
+				|| (BlockTags.CAMPFIRES.contains(block) && blockState.method_28500(CampfireBlock.LIT).orElse(false))
 				|| getHeatLevelOf(blockState) == BlazeBurnerBlock.HeatLevel.SMOULDERING)
 				return Type.SMOKING;
 			if (block == Blocks.LAVA || getHeatLevelOf(blockState).isAtLeast(BlazeBurnerBlock.HeatLevel.FADING))
 				return Type.BLASTING;
-			return null;
+			return Type.NONE;
 		}
 	}
 
@@ -265,7 +264,7 @@ public class InWorldProcessing {
 		}
 	}
 
-	private static List<ItemStack> applyRecipeOn(ItemStack stackIn, IRecipe<?> recipe) {
+	public static List<ItemStack> applyRecipeOn(ItemStack stackIn, IRecipe<?> recipe) {
 		List<ItemStack> stacks;
 
 		if (recipe instanceof ProcessingRecipe) {

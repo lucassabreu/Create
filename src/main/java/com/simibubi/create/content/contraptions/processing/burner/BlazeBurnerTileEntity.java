@@ -1,8 +1,5 @@
 package com.simibubi.create.content.contraptions.processing.burner;
 
-import java.util.List;
-import java.util.Random;
-
 import com.simibubi.create.AllItems;
 import com.simibubi.create.content.contraptions.particle.CubeParticleData;
 import com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock.HeatLevel;
@@ -10,9 +7,8 @@ import com.simibubi.create.foundation.tileEntity.SmartTileEntity;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
 import com.simibubi.create.foundation.utility.AngleHelper;
 import com.simibubi.create.foundation.utility.ColorHelper;
-import com.simibubi.create.foundation.utility.LerpedFloat;
-import com.simibubi.create.foundation.utility.LerpedFloat.Chaser;
-
+import com.simibubi.create.foundation.utility.animation.LerpedFloat;
+import com.simibubi.create.foundation.utility.animation.LerpedFloat.Chaser;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
@@ -22,6 +18,9 @@ import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraftforge.common.ForgeHooks;
+
+import java.util.List;
+import java.util.Random;
 
 public class BlazeBurnerTileEntity extends SmartTileEntity {
 
@@ -76,8 +75,14 @@ public class BlazeBurnerTileEntity extends SmartTileEntity {
 		ClientPlayerEntity player = Minecraft.getInstance().player;
 		float target = 0;
 		if (player != null) {
-			double dx = player.getX() - (getPos().getX() + 0.5);
-			double dz = player.getZ() - (getPos().getZ() + 0.5);
+			double x = player.getX();
+			double z = player.getZ();
+			if (isVirtual()) {
+				x = -4;
+				z = -10;
+			}
+			double dx = x - (getPos().getX() + 0.5);
+			double dz = z - (getPos().getZ() + 0.5);
 			target = AngleHelper.deg(-MathHelper.atan2(dz, dx)) - 90;
 		}
 		target = headAngle.getValue() + AngleHelper.getShortestAngleDiff(headAngle.getValue(), target);

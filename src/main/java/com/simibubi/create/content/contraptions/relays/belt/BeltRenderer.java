@@ -1,7 +1,5 @@
 package com.simibubi.create.content.contraptions.relays.belt;
 
-import java.util.Random;
-
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 import com.simibubi.create.AllBlockPartials;
@@ -11,14 +9,15 @@ import com.simibubi.create.CreateClient;
 import com.simibubi.create.content.contraptions.base.KineticTileEntityRenderer;
 import com.simibubi.create.content.contraptions.relays.belt.transport.TransportedItemStack;
 import com.simibubi.create.foundation.block.render.SpriteShiftEntry;
+import com.simibubi.create.foundation.render.ShadowRenderHelper;
+import com.simibubi.create.foundation.render.SuperByteBuffer;
+import com.simibubi.create.foundation.render.backend.FastRenderDispatcher;
 import com.simibubi.create.foundation.tileEntity.renderer.SafeTileEntityRenderer;
 import com.simibubi.create.foundation.utility.AngleHelper;
 import com.simibubi.create.foundation.utility.AnimationTickHolder;
 import com.simibubi.create.foundation.utility.Iterate;
 import com.simibubi.create.foundation.utility.MatrixStacker;
-import com.simibubi.create.foundation.utility.ShadowRenderHelper;
-import com.simibubi.create.foundation.utility.SuperByteBuffer;
-
+import com.simibubi.create.foundation.utility.worldWrappers.WrappedWorld;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
@@ -28,6 +27,7 @@ import net.minecraft.client.renderer.model.ItemCameraTransforms.TransformType;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.client.settings.GraphicsFanciness;
 import net.minecraft.entity.Entity;
+import net.minecraft.item.DyeColor;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Direction.Axis;
 import net.minecraft.util.Direction.AxisDirection;
@@ -36,118 +36,138 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.math.vector.Vector3f;
 import net.minecraft.util.math.vector.Vector3i;
 
+import java.util.Random;
+
 public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 
 	public BeltRenderer(TileEntityRendererDispatcher dispatcher) {
 		super(dispatcher);
 	}
-	
+
 	@Override
 	public boolean isGlobalRenderer(BeltTileEntity te) {
-		return BeltBlock.canTransportObjects(te.getBlockState());
+		return te.isController();
 	}
 
 	@Override
 	protected void renderSafe(BeltTileEntity te, float partialTicks, MatrixStack ms, IRenderTypeBuffer buffer,
 		int light, int overlay) {
 
-		BlockState blockState = te.getBlockState();
-		if (!AllBlocks.BELT.has(blockState))
-			return;
+		if (!FastRenderDispatcher.available(te.getWorld())) {
 
-		BeltSlope beltSlope = blockState.get(BeltBlock.SLOPE);
-		BeltPart part = blockState.get(BeltBlock.PART);
-		Direction facing = blockState.get(BeltBlock.HORIZONTAL_FACING);
-		AxisDirection axisDirection = facing.getAxisDirection();
+			BlockState blockState = te.getBlockState();
+			if (!AllBlocks.BELT.has(blockState)) return;
 
-		boolean downward = beltSlope == BeltSlope.DOWNWARD;
-		boolean upward = beltSlope == BeltSlope.UPWARD;
-		boolean diagonal = downward || upward;
-		boolean start = part == BeltPart.START;
-		boolean end = part == BeltPart.END;
-		boolean sideways = beltSlope == BeltSlope.SIDEWAYS;
-		boolean alongX = facing.getAxis() == Axis.X;
+			BeltSlope beltSlope = blockState.get(BeltBlock.SLOPE);
+			BeltPart part = blockState.get(BeltBlock.PART);
+			Direction facing = blockState.get(BeltBlock.HORIZONTAL_FACING);
+			AxisDirection axisDirection = facing.getAxisDirection();
 
-		MatrixStacker msr = MatrixStacker.of(ms);
-		IVertexBuilder vb = buffer.getBuffer(RenderType.getSolid());
-		float renderTick = AnimationTickHolder.getRenderTick();
+			boolean downward = beltSlope == BeltSlope.DOWNWARD;
+			boolean upward = beltSlope == BeltSlope.UPWARD;
+			boolean diagonal = downward || upward;
+			boolean start = part == BeltPart.START;
+			boolean end = part == BeltPart.END;
+			boolean sideways = beltSlope == BeltSlope.SIDEWAYS;
+			boolean alongX = facing.getAxis() == Axis.X;
 
-		ms.push();
-		msr.centre();
-		msr.rotateY(AngleHelper.horizontalAngle(facing) + (upward ? 180 : 0) + (sideways ? 270 : 0));
-		msr.rotateZ(sideways ? 90 : 0);
-		msr.rotateX(!diagonal && beltSlope != BeltSlope.HORIZONTAL ? 90 : 0);
-		msr.unCentre();
+			MatrixStack localTransforms = new MatrixStack();
+			MatrixStacker msr = MatrixStacker.of(localTransforms);
+			IVertexBuilder vb = buffer.getBuffer(RenderType.getSolid());
+			float renderTick = AnimationTickHolder.getRenderTime(te.getWorld());
 
-		if (downward || beltSlope == BeltSlope.VERTICAL && axisDirection == AxisDirection.POSITIVE) {
-			boolean b = start;
-			start = end;
-			end = b;
-		}
-
-		for (boolean bottom : Iterate.trueAndFalse) {
-
-			AllBlockPartials beltPartial = diagonal
-				? start ? AllBlockPartials.BELT_DIAGONAL_START
-					: end ? AllBlockPartials.BELT_DIAGONAL_END : AllBlockPartials.BELT_DIAGONAL_MIDDLE
-				: bottom
-					? start ? AllBlockPartials.BELT_START_BOTTOM
-						: end ? AllBlockPartials.BELT_END_BOTTOM : AllBlockPartials.BELT_MIDDLE_BOTTOM
-					: start ? AllBlockPartials.BELT_START
-						: end ? AllBlockPartials.BELT_END : AllBlockPartials.BELT_MIDDLE;
-
-			SuperByteBuffer beltBuffer = beltPartial.renderOn(blockState)
-				.light(light);
-			SpriteShiftEntry spriteShift =
-				diagonal ? AllSpriteShifts.BELT_DIAGONAL : bottom ? AllSpriteShifts.BELT_OFFSET : AllSpriteShifts.BELT;
-			int cycleLength = diagonal ? 12 : 16;
-			int cycleOffset = bottom ? 8 : 0;
-
-			// UV shift
-			float speed = te.getSpeed();
-			if (speed != 0) {
-				float time = renderTick * axisDirection.getOffset();
-				if (diagonal && (downward ^ alongX) || !sideways && !diagonal && alongX
-					|| sideways && axisDirection == AxisDirection.NEGATIVE)
-					speed = -speed;
-				int textureIndex = (int) (((speed * time / 36) + cycleOffset) % cycleLength);
-				if (textureIndex < 0)
-					textureIndex += cycleLength;
-
-				beltBuffer.shiftUVtoSheet(spriteShift, (textureIndex % 4) / 4f, (textureIndex / 4) / 4f, 4);
-			}
-
-			beltBuffer.renderInto(ms, vb);
-
-			// Diagonal belt do not have a separate bottom model
-			if (diagonal)
-				break;
-		}
-		ms.pop();
-
-		if (te.hasPulley()) {
-			// TODO 1.15 find a way to cache this model matrix computation
-			MatrixStack modelTransform = new MatrixStack();
-			Direction dir = blockState.get(BeltBlock.HORIZONTAL_FACING)
-				.rotateY();
-			if (sideways)
-				dir = Direction.UP;
-			msr = MatrixStacker.of(modelTransform);
 			msr.centre();
-			if (dir.getAxis() == Axis.X)
-				msr.rotateY(90);
-			if (dir.getAxis() == Axis.Y)
-				msr.rotateX(90);
-			msr.rotateX(90);
+			msr.rotateY(AngleHelper.horizontalAngle(facing) + (upward ? 180 : 0) + (sideways ? 270 : 0));
+			msr.rotateZ(sideways ? 90 : 0);
+			msr.rotateX(!diagonal && beltSlope != BeltSlope.HORIZONTAL ? 90 : 0);
 			msr.unCentre();
 
-			SuperByteBuffer superBuffer = CreateClient.bufferCache
-				.renderDirectionalPartial(AllBlockPartials.BELT_PULLEY, blockState, dir, modelTransform);
-			KineticTileEntityRenderer.standardKineticRotationTransform(superBuffer, te, light)
-				.renderInto(ms, vb);
+			if (downward || beltSlope == BeltSlope.VERTICAL && axisDirection == AxisDirection.POSITIVE) {
+				boolean b = start;
+				start = end;
+				end = b;
+			}
+
+			DyeColor color = te.color.orElse(null);
+
+			for (boolean bottom : Iterate.trueAndFalse) {
+
+				AllBlockPartials beltPartial = getBeltPartial(diagonal, start, end, bottom);
+
+				SuperByteBuffer beltBuffer = beltPartial.renderOn(blockState)
+													.light(light);
+
+				SpriteShiftEntry spriteShift = getSpriteShiftEntry(color, diagonal, bottom);
+
+				// UV shift
+				float speed = te.getSpeed();
+				if (speed != 0 || te.color.isPresent()) {
+					float time = renderTick * axisDirection.getOffset();
+					if (diagonal && (downward ^ alongX) || !sideways && !diagonal && alongX || sideways && axisDirection == AxisDirection.NEGATIVE)
+						speed = -speed;
+
+					float scrollMult = diagonal ? 3f / 8f : 0.5f;
+
+					float spriteSize = spriteShift.getTarget().getMaxV() - spriteShift.getTarget().getMinV();
+
+					double scroll = speed * time / (31.5 * 16) + (bottom ? 0.5 : 0.0);
+					scroll = scroll - Math.floor(scroll);
+					scroll = scroll * spriteSize * scrollMult;
+
+					beltBuffer.shiftUVScrolling(spriteShift, (float) scroll);
+				}
+
+				beltBuffer
+						.transform(localTransforms)
+						.renderInto(ms, vb);
+
+				// Diagonal belt do not have a separate bottom model
+				if (diagonal) break;
+			}
+
+			if (te.hasPulley()) {
+				// TODO 1.15 find a way to cache this model matrix computation
+				MatrixStack modelTransform = new MatrixStack();
+				Direction dir = blockState.get(BeltBlock.HORIZONTAL_FACING).rotateY();
+				if (sideways) dir = Direction.UP;
+				msr = MatrixStacker.of(modelTransform);
+				msr.centre();
+				if (dir.getAxis() == Axis.X) msr.rotateY(90);
+				if (dir.getAxis() == Axis.Y) msr.rotateX(90);
+				msr.rotateX(90);
+				msr.unCentre();
+
+				SuperByteBuffer superBuffer = CreateClient.bufferCache.renderDirectionalPartial(AllBlockPartials.BELT_PULLEY, blockState, dir, modelTransform);
+				KineticTileEntityRenderer.standardKineticRotationTransform(superBuffer, te, light).renderInto(ms, vb);
+			}
 		}
 
 		renderItems(te, partialTicks, ms, buffer, light, overlay);
+	}
+
+	public static SpriteShiftEntry getSpriteShiftEntry(DyeColor color, boolean diagonal, boolean bottom) {
+		if (color != null) {
+			return (diagonal ? AllSpriteShifts.DYED_DIAGONAL_BELTS
+					: bottom ? AllSpriteShifts.DYED_OFFSET_BELTS : AllSpriteShifts.DYED_BELTS).get(color);
+		} else
+			return diagonal ? AllSpriteShifts.BELT_DIAGONAL
+					: bottom ? AllSpriteShifts.BELT_OFFSET : AllSpriteShifts.BELT;
+	}
+
+	public static AllBlockPartials getBeltPartial(boolean diagonal, boolean start, boolean end, boolean bottom) {
+		if (diagonal) {
+			if (start) return AllBlockPartials.BELT_DIAGONAL_START;
+			if (end) return AllBlockPartials.BELT_DIAGONAL_END;
+			return AllBlockPartials.BELT_DIAGONAL_MIDDLE;
+		} else if (bottom) {
+			if (start) return AllBlockPartials.BELT_START_BOTTOM;
+			if (end) return AllBlockPartials.BELT_END_BOTTOM;
+			return AllBlockPartials.BELT_MIDDLE_BOTTOM;
+		} else {
+			if (start) return AllBlockPartials.BELT_START;
+			if (end) return AllBlockPartials.BELT_END;
+			return AllBlockPartials.BELT_MIDDLE;
+		}
 	}
 
 	protected void renderItems(BeltTileEntity te, float partialTicks, MatrixStack ms, IRenderTypeBuffer buffer,
@@ -159,16 +179,19 @@ public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 
 		ms.push();
 
-		Vector3i directionVec = te.getBeltFacing()
-			.getDirectionVec();
+		Direction beltFacing = te.getBeltFacing();
+		Vector3i directionVec = beltFacing
+							   .getDirectionVec();
 		Vector3d beltStartOffset = Vector3d.of(directionVec).scale(-.5)
 			.add(.5, 13 / 16f + .125f, .5);
 		ms.translate(beltStartOffset.x, beltStartOffset.y, beltStartOffset.z);
 		BeltSlope slope = te.getBlockState()
 			.get(BeltBlock.SLOPE);
 		int verticality = slope == BeltSlope.DOWNWARD ? -1 : slope == BeltSlope.UPWARD ? 1 : 0;
-		boolean slopeAlongX = te.getBeltFacing()
-			.getAxis() == Axis.X;
+		boolean slopeAlongX = beltFacing
+								.getAxis() == Axis.X;
+
+		boolean onContraption = te.getWorld() instanceof WrappedWorld;
 
 		for (TransportedItemStack transported : te.getInventory()
 			.getTransportedItems()) {
@@ -184,6 +207,8 @@ public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 				sideOffset = transported.sideOffset;
 			}
 
+			int stackLight = onContraption ? light : getPackedLight(te, offset);
+
 			if (offset < .5)
 				verticalMovement = 0;
 			verticalMovement = verticalMovement * (Math.min(offset, te.beltLength - .5f) - .5f);
@@ -191,16 +216,16 @@ public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 				.add(0, verticalMovement, 0);
 			boolean onSlope =
 				slope != BeltSlope.HORIZONTAL && MathHelper.clamp(offset, .5f, te.beltLength - .5f) == offset;
-			boolean tiltForward = (slope == BeltSlope.DOWNWARD ^ te.getBeltFacing()
-				.getAxisDirection() == AxisDirection.POSITIVE) == (te.getBeltFacing()
-					.getAxis() == Axis.Z);
+			boolean tiltForward = (slope == BeltSlope.DOWNWARD ^ beltFacing
+																   .getAxisDirection() == AxisDirection.POSITIVE) == (beltFacing
+																														.getAxis() == Axis.Z);
 			float slopeAngle = onSlope ? tiltForward ? -45 : 45 : 0;
 
 			ms.translate(offsetVec.x, offsetVec.y, offsetVec.z);
 
-			boolean alongX = te.getBeltFacing()
-				.rotateY()
-				.getAxis() == Axis.X;
+			boolean alongX = beltFacing
+							   .rotateY()
+							   .getAxis() == Axis.X;
 			if (!alongX)
 				sideOffset *= -1;
 			ms.translate(alongX ? sideOffset : 0, 0, alongX ? 0 : sideOffset);
@@ -251,7 +276,7 @@ public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 				}
 
 				ms.scale(.5f, .5f, .5f);
-				itemRenderer.renderItem(transported.stack, TransformType.FIXED, light, overlay, ms, buffer);
+				itemRenderer.renderItem(transported.stack, TransformType.FIXED, stackLight, overlay, ms, buffer);
 				ms.pop();
 
 				if (!renderUpright) {
@@ -268,4 +293,11 @@ public class BeltRenderer extends SafeTileEntityRenderer<BeltTileEntity> {
 		ms.pop();
 	}
 
+	protected int getPackedLight(BeltTileEntity controller, float beltPos) {
+		int segment = (int) Math.floor(beltPos) * 2;
+
+		if (controller.light == null || segment >= controller.light.length) return 0;
+
+		return (controller.light[segment + 1] << 20) | (controller.light[segment] << 4);
+	}
 }

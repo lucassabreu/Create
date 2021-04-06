@@ -4,8 +4,8 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllBlockPartials;
 import com.simibubi.create.content.contraptions.base.KineticTileEntity;
 import com.simibubi.create.content.contraptions.base.KineticTileEntityRenderer;
-import com.simibubi.create.foundation.utility.SuperByteBuffer;
-
+import com.simibubi.create.foundation.render.SuperByteBuffer;
+import com.simibubi.create.foundation.render.backend.FastRenderDispatcher;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.RenderType;
@@ -20,9 +20,16 @@ public class MechanicalPressRenderer extends KineticTileEntityRenderer {
 	}
 
 	@Override
+	public boolean isGlobalRenderer(KineticTileEntity te) {
+		return true;
+	}
+
+	@Override
 	protected void renderSafe(KineticTileEntity te, float partialTicks, MatrixStack ms, IRenderTypeBuffer buffer,
 			int light, int overlay) {
 		super.renderSafe(te, partialTicks, ms, buffer, light, overlay);
+
+		if (FastRenderDispatcher.available(te.getWorld())) return;
 
 		BlockPos pos = te.getPos();
 		BlockState blockState = te.getBlockState();
@@ -30,7 +37,9 @@ public class MechanicalPressRenderer extends KineticTileEntityRenderer {
 		float renderedHeadOffset = ((MechanicalPressTileEntity) te).getRenderedHeadOffset(partialTicks);
 
 		SuperByteBuffer headRender = AllBlockPartials.MECHANICAL_PRESS_HEAD.renderOnHorizontal(blockState);
-		headRender.translate(0, -renderedHeadOffset, 0).light(packedLightmapCoords).renderInto(ms, buffer.getBuffer(RenderType.getSolid()));
+		headRender.translate(0, -renderedHeadOffset, 0)
+				  .light(packedLightmapCoords)
+				  .renderInto(ms, buffer.getBuffer(RenderType.getSolid()));
 	}
 
 	@Override

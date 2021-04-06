@@ -1,13 +1,10 @@
 package com.simibubi.create.content.logistics.block.funnel;
 
-import com.simibubi.create.content.logistics.block.chute.ChuteTileEntity;
 import com.simibubi.create.foundation.advancement.AllTriggers;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -39,15 +36,12 @@ public class FunnelItem extends BlockItem {
 			return state;
 		if (!(state.getBlock() instanceof FunnelBlock))
 			return state;
-		Direction direction = state.get(FunnelBlock.FACING);
-		if (!direction.getAxis()
-			.isHorizontal()) {
-			TileEntity tileEntity = world.getTileEntity(pos.offset(direction.getOpposite()));
-			if (tileEntity instanceof ChuteTileEntity && ((ChuteTileEntity) tileEntity).getItemMotion() > 0)
-				state = state.with(FunnelBlock.FACING, direction.getOpposite());
+		if (state.get(FunnelBlock.FACING)
+			.getAxis()
+			.isVertical())
 			return state;
-		}
 
+		Direction direction = state.get(FunnelBlock.FACING);
 		FunnelBlock block = (FunnelBlock) getBlock();
 		Block beltFunnelBlock = block.getEquivalentBeltFunnel(world, pos, state)
 			.getBlock();

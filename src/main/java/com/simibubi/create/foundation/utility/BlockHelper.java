@@ -6,9 +6,15 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.content.contraptions.base.KineticTileEntity;
+import com.simibubi.create.content.contraptions.components.actors.SeatBlock;
+
+import net.minecraft.block.BedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.SlimeBlock;
 import net.minecraft.client.particle.DiggingParticle;
 import net.minecraft.client.particle.ParticleManager;
 import net.minecraft.client.world.ClientWorld;
@@ -17,12 +23,16 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.state.Property;
 import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.state.properties.SlabType;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.shapes.VoxelShape;
@@ -32,6 +42,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.IPlantable;
 
 public class BlockHelper {
 
@@ -76,31 +87,31 @@ public class BlockHelper {
 	}
 
 	public static BlockState setZeroAge(BlockState blockState) {
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_1))
+		if (blockState.contains(BlockStateProperties.AGE_0_1))
 			return blockState.with(BlockStateProperties.AGE_0_1, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_2))
+		if (blockState.contains(BlockStateProperties.AGE_0_2))
 			return blockState.with(BlockStateProperties.AGE_0_2, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_3))
+		if (blockState.contains(BlockStateProperties.AGE_0_3))
 			return blockState.with(BlockStateProperties.AGE_0_3, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_5))
+		if (blockState.contains(BlockStateProperties.AGE_0_5))
 			return blockState.with(BlockStateProperties.AGE_0_5, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_7))
+		if (blockState.contains(BlockStateProperties.AGE_0_7))
 			return blockState.with(BlockStateProperties.AGE_0_7, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_15))
+		if (blockState.contains(BlockStateProperties.AGE_0_15))
 			return blockState.with(BlockStateProperties.AGE_0_15, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.AGE_0_25))
+		if (blockState.contains(BlockStateProperties.AGE_0_25))
 			return blockState.with(BlockStateProperties.AGE_0_25, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.HONEY_LEVEL))
+		if (blockState.contains(BlockStateProperties.HONEY_LEVEL))
 			return blockState.with(BlockStateProperties.HONEY_LEVEL, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.HATCH_0_2))
+		if (blockState.contains(BlockStateProperties.HATCH_0_2))
 			return blockState.with(BlockStateProperties.HATCH_0_2, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.STAGE_0_1))
+		if (blockState.contains(BlockStateProperties.STAGE_0_1))
 			return blockState.with(BlockStateProperties.STAGE_0_1, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.LEVEL_0_3))
+		if (blockState.contains(BlockStateProperties.LEVEL_0_3))
 			return blockState.with(BlockStateProperties.LEVEL_0_3, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.LEVEL_0_8))
+		if (blockState.contains(BlockStateProperties.LEVEL_0_8))
 			return blockState.with(BlockStateProperties.LEVEL_0_8, 0);
-		if (hasBlockStateProperty(blockState, BlockStateProperties.EXTENDED))
+		if (blockState.contains(BlockStateProperties.EXTENDED))
 			return blockState.with(BlockStateProperties.EXTENDED, false);
 		return blockState;
 	}
@@ -110,15 +121,15 @@ public class BlockHelper {
 		Item required = getRequiredItem(block).getItem();
 
 		boolean needsTwo =
-			hasBlockStateProperty(block, BlockStateProperties.SLAB_TYPE) && block.get(BlockStateProperties.SLAB_TYPE) == SlabType.DOUBLE;
+			block.contains(BlockStateProperties.SLAB_TYPE) && block.get(BlockStateProperties.SLAB_TYPE) == SlabType.DOUBLE;
 
 		if (needsTwo)
 			amount *= 2;
 
-		if (hasBlockStateProperty(block, BlockStateProperties.EGGS_1_4))
+		if (block.contains(BlockStateProperties.EGGS_1_4))
 			amount *= block.get(BlockStateProperties.EGGS_1_4);
 
-		if (hasBlockStateProperty(block, BlockStateProperties.PICKLES_1_4))
+		if (block.contains(BlockStateProperties.PICKLES_1_4))
 			amount *= block.get(BlockStateProperties.PICKLES_1_4);
 
 		{
@@ -173,33 +184,92 @@ public class BlockHelper {
 
 	public static void destroyBlock(World world, BlockPos pos, float effectChance,
 		Consumer<ItemStack> droppedItemCallback) {
-		FluidState FluidState = world.getFluidState(pos);
+
+		FluidState fluidState = world.getFluidState(pos);
 		BlockState state = world.getBlockState(pos);
 		if (world.rand.nextFloat() < effectChance)
 			world.playEvent(2001, pos, Block.getStateId(state));
 		TileEntity tileentity = state.hasTileEntity() ? world.getTileEntity(pos) : null;
 
-		if (world.getGameRules()
-			.getBoolean(GameRules.DO_TILE_DROPS) && !world.restoringBlockSnapshots && world instanceof ServerWorld) {
+		if (world instanceof ServerWorld && world.getGameRules()
+			.getBoolean(GameRules.DO_TILE_DROPS) && !world.restoringBlockSnapshots) {
 			for (ItemStack itemStack : Block.getDrops(state, (ServerWorld) world, pos, tileentity))
 				droppedItemCallback.accept(itemStack);
 			state.spawnAdditionalDrops((ServerWorld) world, pos, ItemStack.EMPTY);
 		}
 
-		world.setBlockState(pos, FluidState.getBlockState());
+		world.setBlockState(pos, fluidState.getBlockState());
 	}
 
 	public static boolean isSolidWall(IBlockReader reader, BlockPos fromPos, Direction toDirection) {
 		return hasBlockSolidSide(reader.getBlockState(fromPos.offset(toDirection)), reader,
 			fromPos.offset(toDirection), toDirection.getOpposite());
 	}
-	
+
 	public static boolean noCollisionInSpace(IBlockReader reader, BlockPos pos) {
-		return reader.getBlockState(pos).getCollisionShape(reader, pos).isEmpty();
+		return reader.getBlockState(pos)
+			.getCollisionShape(reader, pos)
+			.isEmpty();
 	}
 
-	public static boolean hasBlockStateProperty(BlockState state, Property<?> p) {
-		return state.method_28500(p).isPresent();
+	public static void placeSchematicBlock(World world, BlockState state, BlockPos target, ItemStack stack,
+		@Nullable CompoundNBT data) {
+		// Piston
+		if (state.contains(BlockStateProperties.EXTENDED))
+			state = state.with(BlockStateProperties.EXTENDED, Boolean.FALSE);
+		if (state.contains(BlockStateProperties.WATERLOGGED))
+			state = state.with(BlockStateProperties.WATERLOGGED, Boolean.FALSE);
+
+		if (AllBlocks.BELT.has(state)) {
+			world.setBlockState(target, state, 2);
+			return;
+		} else if (state.getBlock() == Blocks.COMPOSTER)
+			state = Blocks.COMPOSTER.getDefaultState();
+		else if (state.getBlock() != Blocks.SEA_PICKLE && state.getBlock() instanceof IPlantable)
+			state = ((IPlantable) state.getBlock()).getPlant(world, target);
+
+		if (world.getDimension().isUltrawarm() && state.getFluidState()
+			.getFluid()
+			.isIn(FluidTags.WATER)) {
+			int i = target.getX();
+			int j = target.getY();
+			int k = target.getZ();
+			world.playSound(null, target, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.5F,
+				2.6F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8F);
+
+			for (int l = 0; l < 8; ++l) {
+				world.addParticle(ParticleTypes.LARGE_SMOKE, i + Math.random(), j + Math.random(), k + Math.random(),
+					0.0D, 0.0D, 0.0D);
+			}
+			Block.spawnDrops(state, world, target);
+			return;
+		}
+		world.setBlockState(target, state, 18);
+		if (data != null) {
+			TileEntity tile = world.getTileEntity(target);
+			if (tile != null) {
+				data.putInt("x", target.getX());
+				data.putInt("y", target.getY());
+				data.putInt("z", target.getZ());
+				if (tile instanceof KineticTileEntity)
+					((KineticTileEntity) tile).warnOfMovement();
+				tile.fromTag(tile.getBlockState(), data);
+			}
+		}
+
+		try {
+			state.getBlock()
+				.onBlockPlacedBy(world, target, state, null, stack);
+		} catch (Exception e) {
+		}
+	}
+	
+	public static double getBounceMultiplier(Block block) {
+		if (block instanceof SlimeBlock)
+			return 0.8D;
+		if (block instanceof BedBlock || block instanceof SeatBlock)
+			return 0.66 * 0.8D;
+		return 0;
 	}
 
 	public static boolean hasBlockSolidSide(BlockState p_220056_0_, IBlockReader p_220056_1_, BlockPos p_220056_2_, Direction p_220056_3_) {

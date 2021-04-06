@@ -65,6 +65,7 @@ public class SuperRenderTypeBuffer implements IRenderTypeBuffer {
 
 		// Visible clones from net.minecraft.client.renderer.RenderTypeBuffers
 		static final RegionRenderCacheBuilder blockBuilders = new RegionRenderCacheBuilder();
+
 		static final SortedMap<RenderType, BufferBuilder> createEntityBuilders() {
 			return Util.make(new Object2ObjectLinkedOpenHashMap<>(), (map) -> {
 				map.put(Atlases.getEntitySolid(), blockBuilders.get(RenderType.getSolid()));
@@ -86,7 +87,6 @@ public class SuperRenderTypeBuffer implements IRenderTypeBuffer {
 				});
 			});
 		}
-			
 
 		private static void assign(Object2ObjectLinkedOpenHashMap<RenderType, BufferBuilder> map, RenderType type) {
 			map.put(type, new BufferBuilder(type.getExpectedBufferSize()));

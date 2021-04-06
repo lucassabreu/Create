@@ -4,8 +4,10 @@ import java.util.List;
 
 import com.simibubi.create.content.contraptions.base.KineticTileEntity;
 import com.simibubi.create.content.contraptions.components.structureMovement.AbstractContraptionEntity;
+import com.simibubi.create.content.contraptions.components.structureMovement.AssemblyException;
 import com.simibubi.create.content.contraptions.components.structureMovement.ControlledContraptionEntity;
 import com.simibubi.create.content.contraptions.components.structureMovement.IControlContraption;
+import com.simibubi.create.content.contraptions.components.structureMovement.IDisplayAssemblyExceptions;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
 import com.simibubi.create.foundation.tileEntity.behaviour.ValueBoxTransform;
 import com.simibubi.create.foundation.tileEntity.behaviour.scrollvalue.ScrollOptionBehaviour;
@@ -19,7 +21,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 
-public abstract class LinearActuatorTileEntity extends KineticTileEntity implements IControlContraption {
+public abstract class LinearActuatorTileEntity extends KineticTileEntity
+	implements IControlContraption, IDisplayAssemblyExceptions {
 
 	public float offset;
 	public boolean running;
@@ -28,6 +31,7 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 	protected boolean forceMove;
 	protected ScrollOptionBehaviour<MovementMode> movementMode;
 	protected boolean waitingForSpeedChange;
+	protected AssemblyException lastException;
 
 	// Custom position sync
 	protected float clientOffsetDiff;
@@ -81,7 +85,13 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 				return;
 			} else {
 				if (getSpeed() != 0)
-					assemble();
+					try {
+						assemble();
+						lastException = null;
+					} catch (AssemblyException e) {
+						lastException = e;
+					}
+				sendData();
 			}
 			return;
 		}
@@ -139,6 +149,11 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 		super.onSpeedChanged(prevSpeed);
 		assembleNextTick = true;
 		waitingForSpeedChange = false;
+
+		if (movedContraption != null && Math.signum(prevSpeed) != Math.signum(getSpeed()) && prevSpeed != 0) {
+			movedContraption.getContraption()
+				.stop(world);
+		}
 	}
 
 	@Override
@@ -154,8 +169,9 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 		compound.putBoolean("Running", running);
 		compound.putBoolean("Waiting", waitingForSpeedChange);
 		compound.putFloat("Offset", offset);
+		AssemblyException.write(compound, lastException);
 		super.write(compound, clientPacket);
-		
+
 		if (clientPacket && forceMove) {
 			compound.putBoolean("ForceMovement", forceMove);
 			forceMove = false;
@@ -170,6 +186,7 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 		running = compound.getBoolean("Running");
 		waitingForSpeedChange = compound.getBoolean("Waiting");
 		offset = compound.getFloat("Offset");
+		lastException = AssemblyException.read(compound);
 		super.fromTag(state, compound, clientPacket);
 
 		if (!clientPacket)
@@ -184,9 +201,14 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 			movedContraption = null;
 	}
 
+	@Override
+	public AssemblyException getLastAssemblyException() {
+		return lastException;
+	}
+
 	public abstract void disassemble();
 
-	protected abstract void assemble();
+	protected abstract void assemble() throws AssemblyException;
 
 	protected abstract int getExtensionRange();
 
@@ -248,7 +270,7 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 	}
 
 	public float getMovementSpeed() {
-		float movementSpeed = getSpeed() / 512f + clientOffsetDiff / 2f;
+		float movementSpeed = MathHelper.clamp(getSpeed() / 512f, -.49f, .49f) + clientOffsetDiff / 2f;
 		if (world.isRemote)
 			movementSpeed *= ServerSpeedProvider.get();
 		return movementSpeed;
@@ -284,10 +306,9 @@ public abstract class LinearActuatorTileEntity extends KineticTileEntity impleme
 	public boolean isAttachedTo(AbstractContraptionEntity contraption) {
 		return movedContraption == contraption;
 	}
-	
+
 	@Override
 	public BlockPos getBlockPosition() {
 		return pos;
 	}
-
 }

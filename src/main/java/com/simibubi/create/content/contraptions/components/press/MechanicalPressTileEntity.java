@@ -103,7 +103,7 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 	}
 
 	@Override
-	public AxisAlignedBB getRenderBoundingBox() {
+	public AxisAlignedBB makeRenderBoundingBox() {
 		return new AxisAlignedBB(pos).expand(0, -1.5, 0)
 			.expand(0, 1, 0);
 	}
@@ -121,6 +121,7 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 	public void start(Mode mode) {
 		this.mode = mode;
 		running = true;
+		prevRunningTicks = 0;
 		runningTicks = 0;
 		pressedItems.clear();
 		sendData();
@@ -154,6 +155,8 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 
 					for (ItemEntity itemEntity : world.getEntitiesWithinAABB(ItemEntity.class,
 						new AxisAlignedBB(pos.down()).shrink(.125f))) {
+						if (!itemEntity.isAlive() || !itemEntity.isOnGround())
+							continue;
 						ItemStack stack = itemEntity.getItem();
 						Optional<PressingRecipe> recipe = getRecipe(stack);
 						if (!recipe.isPresent())
@@ -202,7 +205,7 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 		if (prevRunningTicks < CYCLE / 2 && runningTicks >= CYCLE / 2) {
 			runningTicks = CYCLE / 2;
 			// Pause the ticks until a packet is received
-			if (world.isRemote)
+			if (world.isRemote && !isVirtual())
 				runningTicks = -(CYCLE / 2);
 		}
 	}
@@ -234,7 +237,7 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 		for (Entity entity : world.getEntitiesWithinAABBExcludingEntity(null, bb)) {
 			if (!(entity instanceof ItemEntity))
 				continue;
-			if (!entity.isAlive())
+			if (!entity.isAlive() || !entity.isOnGround())
 				continue;
 			ItemEntity itemEntity = (ItemEntity) entity;
 			pressedItems.add(itemEntity.getItem());
@@ -341,7 +344,7 @@ public class MechanicalPressTileEntity extends BasinOperatingTileEntity {
 		return Optional.of(AllTriggers.PRESS_COMPACT);
 	}
 
-	enum Mode {
+	public enum Mode {
 		WORLD(1), BELT(19f / 16f), BASIN(22f / 16f)
 
 		;

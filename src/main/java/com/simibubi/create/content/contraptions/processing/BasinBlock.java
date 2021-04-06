@@ -4,7 +4,9 @@ import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllShapes;
 import com.simibubi.create.AllTileEntities;
 import com.simibubi.create.content.contraptions.fluids.actors.GenericItemFilling;
+import com.simibubi.create.content.contraptions.relays.belt.BeltTileEntity;
 import com.simibubi.create.content.contraptions.wrench.IWrenchable;
+import com.simibubi.create.content.logistics.block.funnel.FunnelBlock;
 import com.simibubi.create.foundation.advancement.AllTriggers;
 import com.simibubi.create.foundation.block.ITE;
 import com.simibubi.create.foundation.fluid.FluidHelper;
@@ -12,7 +14,6 @@ import com.simibubi.create.foundation.item.ItemHelper;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
 import com.simibubi.create.foundation.tileEntity.behaviour.belt.DirectBeltInputBehaviour;
 import com.simibubi.create.foundation.tileEntity.behaviour.filtering.FilteringBehaviour;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -20,6 +21,7 @@ import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUseContext;
+import net.minecraft.item.Items;
 import net.minecraft.state.DirectionProperty;
 import net.minecraft.state.StateContainer.Builder;
 import net.minecraft.state.properties.BlockStateProperties;
@@ -34,6 +36,10 @@ import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
@@ -93,6 +99,11 @@ public class BasinBlock extends Block implements ITE<BasinTileEntity>, IWrenchab
 				if (EmptyingByBasin.canItemBeEmptied(worldIn, heldItem)
 					|| GenericItemFilling.canItemBeFilled(worldIn, heldItem))
 					return ActionResultType.SUCCESS;
+				if (heldItem.getItem().equals(Items.SPONGE) &&
+						!te.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY).map(iFluidHandler ->
+								iFluidHandler.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.EXECUTE)).orElse(FluidStack.EMPTY).isEmpty()) {
+					return ActionResultType.SUCCESS;
+				}
 				return ActionResultType.PASS;
 			}
 
@@ -170,11 +181,9 @@ public class BasinBlock extends Block implements ITE<BasinTileEntity>, IWrenchab
 
 	@Override
 	public int getComparatorInputOverride(BlockState blockState, World worldIn, BlockPos pos) {
-		try {
-			return ItemHelper.calcRedstoneFromInventory(getTileEntity(worldIn, pos).inputInventory);
-		} catch (TileEntityException e) {
-		}
-		return 0;
+		return getTileEntityOptional(worldIn, pos).map(BasinTileEntity::getInputInventory)
+			.map(ItemHelper::calcRedstoneFromInventory)
+			.orElse(0);
 	}
 
 	@Override
@@ -184,15 +193,25 @@ public class BasinBlock extends Block implements ITE<BasinTileEntity>, IWrenchab
 
 	public static boolean canOutputTo(IBlockReader world, BlockPos basinPos, Direction direction) {
 		BlockPos neighbour = basinPos.offset(direction);
-		if (!world.getBlockState(neighbour)
-			.getCollisionShape(world, neighbour)
-			.isEmpty())
-			return false;
+		BlockPos output = neighbour.down();
+		BlockState blockState = world.getBlockState(neighbour);
 
-		BlockPos offset = basinPos.down()
-			.offset(direction);
+		if (FunnelBlock.isFunnel(blockState)) {
+			if (FunnelBlock.getFunnelFacing(blockState) == direction)
+				return false;
+		} else if (!blockState.getCollisionShape(world, neighbour)
+			.isEmpty()) {
+			return false;
+		} else {
+			TileEntity tileEntity = world.getTileEntity(output);
+			if (tileEntity instanceof BeltTileEntity) {
+				BeltTileEntity belt = (BeltTileEntity) tileEntity;
+				return belt.getSpeed() == 0 || belt.getMovementFacing() != direction.getOpposite();
+			}
+		}
+
 		DirectBeltInputBehaviour directBeltInputBehaviour =
-			TileEntityBehaviour.get(world, offset, DirectBeltInputBehaviour.TYPE);
+			TileEntityBehaviour.get(world, output, DirectBeltInputBehaviour.TYPE);
 		if (directBeltInputBehaviour != null)
 			return directBeltInputBehaviour.canInsertFromSide(direction);
 		return false;

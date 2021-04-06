@@ -1,16 +1,9 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.mounted;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllShapes;
 import com.simibubi.create.AllTileEntities;
+import com.simibubi.create.content.contraptions.components.structureMovement.AssemblyException;
 import com.simibubi.create.content.contraptions.components.structureMovement.OrientedContraptionEntity;
 import com.simibubi.create.content.contraptions.components.structureMovement.mounted.CartAssemblerTileEntity.CartMovementMode;
 import com.simibubi.create.content.contraptions.components.structureMovement.train.CouplingHandler;
@@ -25,7 +18,6 @@ import com.simibubi.create.foundation.block.ITE;
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Iterate;
 import com.simibubi.create.foundation.utility.VecHelper;
-
 import net.minecraft.block.AbstractRailBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -48,13 +40,8 @@ import net.minecraft.state.StateContainer.Builder;
 import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.state.properties.RailShape;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Direction;
+import net.minecraft.util.*;
 import net.minecraft.util.Direction.Axis;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.math.MathHelper;
@@ -68,6 +55,13 @@ import net.minecraft.world.IWorldReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class CartAssemblerBlock extends AbstractRailBlock
 	implements ITE<CartAssemblerTileEntity>, IWrenchable, ISpecialBlockItemRequirement {
@@ -91,11 +85,13 @@ public class CartAssemblerBlock extends AbstractRailBlock
 	}
 
 	private static Item getRailItem(BlockState state) {
-		return state.get(RAIL_TYPE).getItem();
+		return state.get(RAIL_TYPE)
+			.getItem();
 	}
 
 	public static BlockState getRailBlock(BlockState state) {
-		AbstractRailBlock railBlock = (AbstractRailBlock) state.get(RAIL_TYPE).getBlock();
+		AbstractRailBlock railBlock = (AbstractRailBlock) state.get(RAIL_TYPE)
+			.getBlock();
 		BlockState railState = railBlock.getDefaultState()
 			.with(railBlock.getShapeProperty(), state.get(RAIL_SHAPE));
 		if (railState.contains(ControllerRailBlock.BACKWARDS)) {
@@ -192,11 +188,21 @@ public class CartAssemblerBlock extends AbstractRailBlock
 				disassemble(world, pos, cart);
 			if (action == CartAssemblerAction.ASSEMBLE_ACCELERATE) {
 				Direction facing = cart.getAdjustedHorizontalFacing();
+
+				RailShape railShape = state.get(RAIL_SHAPE);
+				for (Direction d : Iterate.directionsInAxis(railShape == RailShape.EAST_WEST ? Axis.X : Axis.Z))
+					if (world.getBlockState(pos.offset(d))
+						.isNormalCube(world, pos.offset(d)))
+						facing = d.getOpposite();
+
 				float speed = getRailMaxSpeed(state, world, pos, cart);
 				cart.setMotion(facing.getXOffset() * speed, facing.getYOffset() * speed, facing.getZOffset() * speed);
 			}
 			if (action == CartAssemblerAction.ASSEMBLE_ACCELERATE_DIRECTIONAL) {
-				Vector3i accelerationVector = ControllerRailBlock.getAccelerationVector(AllBlocks.CONTROLLER_RAIL.getDefaultState().with(ControllerRailBlock.SHAPE, state.get(RAIL_SHAPE)).with(ControllerRailBlock.BACKWARDS, state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS));
+				Vector3i accelerationVector = ControllerRailBlock.getAccelerationVector(
+						AllBlocks.CONTROLLER_RAIL.getDefaultState()
+								.with(ControllerRailBlock.SHAPE, state.get(RAIL_SHAPE))
+								.with(ControllerRailBlock.BACKWARDS, state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS));
 				float speed = getRailMaxSpeed(state, world, pos, cart);
 				cart.setMotion(Vector3d.of(accelerationVector).scale(speed));
 			}
@@ -239,7 +245,8 @@ public class CartAssemblerBlock extends AbstractRailBlock
 				.isEmpty() ? CartAssemblerAction.ASSEMBLE_ACCELERATE : CartAssemblerAction.DISASSEMBLE;
 
 		if (type == CartAssembleRailType.CONTROLLER_RAIL || type == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS)
-			return powered ? CartAssemblerAction.ASSEMBLE_ACCELERATE_DIRECTIONAL : CartAssemblerAction.DISASSEMBLE_BRAKE;
+			return powered ? CartAssemblerAction.ASSEMBLE_ACCELERATE_DIRECTIONAL
+				: CartAssemblerAction.DISASSEMBLE_BRAKE;
 
 		return CartAssemblerAction.PASS;
 	}
@@ -288,13 +295,26 @@ public class CartAssemblerBlock extends AbstractRailBlock
 			.isCoupledThroughContraption())
 			return;
 
-		CartMovementMode mode =
-			getTileEntityOptional(world, pos).map(te -> CartMovementMode.values()[te.movementMode.value])
-				.orElse(CartMovementMode.ROTATE);
+		Optional<CartAssemblerTileEntity> assembler = getTileEntityOptional(world, pos);
+		CartMovementMode mode = assembler.map(te -> CartMovementMode.values()[te.movementMode.value])
+			.orElse(CartMovementMode.ROTATE);
 
 		MountedContraption contraption = new MountedContraption(mode);
-		if (!contraption.assemble(world, pos))
+		try {
+			if (!contraption.assemble(world, pos))
+				return;
+
+			assembler.ifPresent(te -> {
+				te.lastException = null;
+				te.sendData();
+			});
+		} catch (AssemblyException e) {
+			assembler.ifPresent(te -> {
+				te.lastException = e;
+				te.sendData();
+			});
 			return;
+		}
 
 		boolean couplingFound = contraption.connectedCart != null;
 		Optional<Direction> initialOrientation = cart.getMotion()
@@ -385,8 +405,6 @@ public class CartAssemblerBlock extends AbstractRailBlock
 	@Override
 	public void neighborChanged(@Nonnull BlockState state, @Nonnull World worldIn, @Nonnull BlockPos pos,
 		@Nonnull Block blockIn, @Nonnull BlockPos fromPos, boolean isMoving) {
-		super.neighborChanged(state, worldIn, pos, blockIn, fromPos, isMoving);
-
 		if (worldIn.isRemote)
 			return;
 
@@ -394,6 +412,8 @@ public class CartAssemblerBlock extends AbstractRailBlock
 		if (previouslyPowered != worldIn.isBlockPowered(pos)) {
 			worldIn.setBlockState(pos, state.cycle(POWERED), 2);
 		}
+
+		super.neighborChanged(state, worldIn, pos, blockIn, fromPos, isMoving);
 	}
 
 	@Override
@@ -460,7 +480,7 @@ public class CartAssemblerBlock extends AbstractRailBlock
 
 	@Override
 	public ItemRequirement getRequiredItems(BlockState state) {
-		ArrayList<ItemStack> reuiredItems = new ArrayList<ItemStack>();
+		ArrayList<ItemStack> reuiredItems = new ArrayList<>();
 		reuiredItems.add(new ItemStack(getRailItem(state)));
 		reuiredItems.add(new ItemStack(asItem()));
 		return new ItemRequirement(ItemUseType.CONSUME, reuiredItems);
@@ -521,15 +541,22 @@ public class CartAssemblerBlock extends AbstractRailBlock
 		if (world.isRemote)
 			return ActionResultType.SUCCESS;
 		BlockPos pos = context.getPos();
-		BlockState newState = state.with(RAIL_SHAPE, state.get(RAIL_SHAPE) == RailShape.NORTH_SOUTH ? RailShape.EAST_WEST : RailShape.NORTH_SOUTH);
-		if (state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL || state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS) {
-			newState = newState.with(RAIL_TYPE, AllBlocks.CONTROLLER_RAIL.get().rotate(AllBlocks.CONTROLLER_RAIL.getDefaultState()
-				.with(ControllerRailBlock.SHAPE, state.get(RAIL_SHAPE)).with(ControllerRailBlock.BACKWARDS,
-					state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS), Rotation.CLOCKWISE_90)
-				.get(ControllerRailBlock.BACKWARDS) ? CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS : CartAssembleRailType.CONTROLLER_RAIL);
+		BlockState newState = state.with(RAIL_SHAPE,
+			state.get(RAIL_SHAPE) == RailShape.NORTH_SOUTH ? RailShape.EAST_WEST : RailShape.NORTH_SOUTH);
+		if (state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL
+			|| state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS) {
+			newState = newState.with(RAIL_TYPE, AllBlocks.CONTROLLER_RAIL.get()
+				.rotate(AllBlocks.CONTROLLER_RAIL.getDefaultState()
+					.with(ControllerRailBlock.SHAPE, state.get(RAIL_SHAPE))
+					.with(ControllerRailBlock.BACKWARDS,
+						state.get(RAIL_TYPE) == CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS),
+					Rotation.CLOCKWISE_90)
+				.get(ControllerRailBlock.BACKWARDS) ? CartAssembleRailType.CONTROLLER_RAIL_BACKWARDS
+					: CartAssembleRailType.CONTROLLER_RAIL);
 		}
-			context.getWorld().setBlockState(pos, newState, 3);
-			world.notifyNeighborsOfStateChange(pos.down(), this);
+		context.getWorld()
+			.setBlockState(pos, newState, 3);
+		world.notifyNeighborsOfStateChange(pos.down(), this);
 		return ActionResultType.SUCCESS;
 	}
 }

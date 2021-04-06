@@ -3,7 +3,6 @@ package com.simibubi.create.foundation.utility.outliner;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.foundation.renderState.SuperRenderTypeBuffer;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 
@@ -19,7 +18,7 @@ public class LineOutline extends Outline {
 	}
 
 	@Override
-	public void render(MatrixStack ms, SuperRenderTypeBuffer buffer) {
+	public void render(MatrixStack ms, SuperRenderTypeBuffer buffer, float pt) {
 		renderCuboidLine(ms, buffer, start, end);
 	}
 
@@ -46,9 +45,7 @@ public class LineOutline extends Outline {
 		}
 
 		@Override
-		public void render(MatrixStack ms, SuperRenderTypeBuffer buffer) {
-			float pt = Minecraft.getInstance()
-				.getRenderPartialTicks();
+		public void render(MatrixStack ms, SuperRenderTypeBuffer buffer, float pt) {
 			float distanceToTarget = 1 - MathHelper.lerp(pt, prevProgress, progress);
 			Vector3d start = end.add(this.start.subtract(end)
 				.scale(distanceToTarget));

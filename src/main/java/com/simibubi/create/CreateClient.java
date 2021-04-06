@@ -1,12 +1,7 @@
 package com.simibubi.create;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
 import com.simibubi.create.content.contraptions.base.KineticTileEntityRenderer;
-import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionRenderer;
+import com.simibubi.create.content.contraptions.components.structureMovement.render.ContraptionRenderDispatcher;
 import com.simibubi.create.content.contraptions.relays.encased.CasingConnectivity;
 import com.simibubi.create.content.schematics.ClientSchematicLoader;
 import com.simibubi.create.content.schematics.client.SchematicAndQuillHandler;
@@ -14,21 +9,40 @@ import com.simibubi.create.content.schematics.client.SchematicHandler;
 import com.simibubi.create.foundation.ResourceReloadHandler;
 import com.simibubi.create.foundation.block.render.CustomBlockModels;
 import com.simibubi.create.foundation.block.render.SpriteShifter;
+import com.simibubi.create.foundation.config.AllConfigs;
+import com.simibubi.create.foundation.gui.UIRenderHelper;
 import com.simibubi.create.foundation.item.CustomItemModels;
 import com.simibubi.create.foundation.item.CustomRenderedItems;
-import com.simibubi.create.foundation.utility.SuperByteBufferCache;
+import com.simibubi.create.foundation.ponder.content.PonderIndex;
+import com.simibubi.create.foundation.ponder.elements.WorldSectionElement;
+import com.simibubi.create.foundation.render.AllProgramSpecs;
+import com.simibubi.create.foundation.render.KineticRenderer;
+import com.simibubi.create.foundation.render.SuperByteBufferCache;
+import com.simibubi.create.foundation.render.backend.Backend;
+import com.simibubi.create.foundation.render.backend.OptifineHandler;
+import com.simibubi.create.foundation.render.backend.instancing.InstancedTileRenderer;
+import com.simibubi.create.foundation.utility.WorldAttached;
+import com.simibubi.create.foundation.utility.ghost.GhostBlocks;
 import com.simibubi.create.foundation.utility.outliner.Outliner;
-
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockModelShapes;
 import net.minecraft.client.renderer.model.IBakedModel;
 import net.minecraft.client.renderer.model.ModelResourceLocation;
+import net.minecraft.client.settings.GraphicsFanciness;
 import net.minecraft.inventory.container.PlayerContainer;
 import net.minecraft.item.Item;
 import net.minecraft.resources.IReloadableResourceManager;
 import net.minecraft.resources.IResourceManager;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.ChatType;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextComponentUtils;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.event.ClickEvent;
+import net.minecraft.util.text.event.HoverEvent;
+import net.minecraft.world.IWorld;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
@@ -36,13 +50,21 @@ import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
 public class CreateClient {
 
 	public static ClientSchematicLoader schematicSender;
 	public static SchematicHandler schematicHandler;
 	public static SchematicAndQuillHandler schematicAndQuillHandler;
 	public static SuperByteBufferCache bufferCache;
+	public static WorldAttached<KineticRenderer> kineticRenderer;
 	public static final Outliner outliner = new Outliner();
+	public static GhostBlocks ghostBlocks;
 
 	private static CustomBlockModels customBlockModels;
 	private static CustomItemModels customItemModels;
@@ -56,16 +78,25 @@ public class CreateClient {
 		modEventBus.addListener(CreateClient::onModelRegistry);
 		modEventBus.addListener(CreateClient::onTextureStitch);
 		modEventBus.addListener(AllParticleTypes::registerFactories);
+
+		Backend.init();
+		OptifineHandler.init();
 	}
 
 	public static void clientInit(FMLClientSetupEvent event) {
+		AllProgramSpecs.init();
+		kineticRenderer = new WorldAttached<>(KineticRenderer::new);
+
 		schematicSender = new ClientSchematicLoader();
 		schematicHandler = new SchematicHandler();
 		schematicAndQuillHandler = new SchematicAndQuillHandler();
 
 		bufferCache = new SuperByteBufferCache();
 		bufferCache.registerCompartment(KineticTileEntityRenderer.KINETIC_TILE);
-		bufferCache.registerCompartment(ContraptionRenderer.CONTRAPTION, 20);
+		bufferCache.registerCompartment(ContraptionRenderDispatcher.CONTRAPTION, 20);
+		bufferCache.registerCompartment(WorldSectionElement.DOC_WORLD_SECTION, 20);
+
+		ghostBlocks = new GhostBlocks();
 
 		AllKeys.register();
 		AllContainerTypes.registerScreenFactories();
@@ -73,6 +104,10 @@ public class CreateClient {
 		AllEntityTypes.registerRenderers();
 		getColorHandler().init();
 		AllFluids.assignRenderLayers();
+		PonderIndex.register();
+		PonderIndex.registerTags();
+
+		UIRenderHelper.init();
 
 		IResourceManager resourceManager = Minecraft.getInstance()
 			.getResourceManager();
@@ -171,4 +206,39 @@ public class CreateClient {
 		return casingConnectivity;
 	}
 
+	public static void invalidateRenderers() {
+		invalidateRenderers(null);
+	}
+
+	public static void invalidateRenderers(@Nullable IWorld world) {
+		bufferCache.invalidate();
+
+		if (world != null) {
+			kineticRenderer.get(world).invalidate();
+		} else {
+			kineticRenderer.forEach(InstancedTileRenderer::invalidate);
+		}
+
+		ContraptionRenderDispatcher.invalidateAll();
+	}
+
+	public static void checkGraphicsFanciness() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null)
+			return;
+
+		if (mc.gameSettings.graphicsMode != GraphicsFanciness.FABULOUS)
+			return;
+
+		if (AllConfigs.CLIENT.ignoreFabulousWarning.get())
+			return;
+
+		IFormattableTextComponent text = TextComponentUtils.bracketed(new StringTextComponent("WARN")).formatted(TextFormatting.GOLD)
+				.append(new StringTextComponent(" Some of Create's visual features will not be available while Fabulous graphics are enabled!"))
+				.styled(style -> style
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/create dismissFabulousWarning"))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new StringTextComponent("Click here to disable this warning"))));
+
+		mc.ingameGUI.addChatMessage(ChatType.CHAT, text, mc.player.getUniqueID());
+	}
 }

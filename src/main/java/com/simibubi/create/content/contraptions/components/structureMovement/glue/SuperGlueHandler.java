@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.simibubi.create.AllItems;
 import com.simibubi.create.foundation.networking.AllPackets;
+import com.simibubi.create.foundation.utility.placement.IPlacementHelper;
 import com.simibubi.create.foundation.utility.worldWrappers.RayTraceWorld;
 
 import net.minecraft.block.Blocks;
@@ -67,6 +68,8 @@ public class SuperGlueHandler {
 		if (!AllItems.SUPER_GLUE.isIn(itemstack) || reachAttribute == null)
 			return;
 		if (AllItems.WRENCH.isIn(placer.getHeldItemMainhand()))
+			return;
+		if (event.getPlacedAgainst() == IPlacementHelper.ID)
 			return;
 
 		double distance = reachAttribute.getValue();

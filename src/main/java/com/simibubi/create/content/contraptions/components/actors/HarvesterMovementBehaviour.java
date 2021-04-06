@@ -1,22 +1,14 @@
 package com.simibubi.create.content.contraptions.components.actors;
 
-import static net.minecraft.block.HorizontalBlock.HORIZONTAL_FACING;
-
-import org.apache.commons.lang3.mutable.MutableBoolean;
-
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.content.contraptions.components.structureMovement.MovementBehaviour;
 import com.simibubi.create.content.contraptions.components.structureMovement.MovementContext;
+import com.simibubi.create.content.contraptions.components.structureMovement.render.ActorInstance;
+import com.simibubi.create.content.contraptions.components.structureMovement.render.ContraptionKineticRenderer;
+import com.simibubi.create.foundation.render.backend.FastRenderDispatcher;
 import com.simibubi.create.foundation.utility.BlockHelper;
 import com.simibubi.create.foundation.utility.VecHelper;
-
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CocoaBlock;
-import net.minecraft.block.CropsBlock;
-import net.minecraft.block.KelpBlock;
-import net.minecraft.block.KelpTopBlock;
-import net.minecraft.block.SugarCaneBlock;
+import net.minecraft.block.*;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.IntegerProperty;
@@ -26,6 +18,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.IPlantable;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+
+import javax.annotation.Nullable;
+
+import static net.minecraft.block.HorizontalBlock.HORIZONTAL_FACING;
 
 public class HarvesterMovementBehaviour extends MovementBehaviour {
 
@@ -36,9 +33,21 @@ public class HarvesterMovementBehaviour extends MovementBehaviour {
 	}
 
 	@Override
+	public boolean hasSpecialInstancedRendering() {
+		return true;
+	}
+
+	@Nullable
+	@Override
+	public ActorInstance createInstance(ContraptionKineticRenderer kr, MovementContext context) {
+		return new HarvesterActorInstance(kr, context);
+	}
+
+	@Override
 	public void renderInContraption(MovementContext context, MatrixStack ms, MatrixStack msLocal,
 		IRenderTypeBuffer buffers) {
-		HarvesterRenderer.renderInContraption(context, ms, msLocal, buffers);
+		if (!FastRenderDispatcher.available())
+			HarvesterRenderer.renderInContraption(context, ms, msLocal, buffers);
 	}
 
 	@Override

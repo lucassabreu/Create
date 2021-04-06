@@ -1,21 +1,23 @@
 package com.simibubi.create.content.contraptions.components.flywheel.engine;
 
-import java.util.List;
-
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelBlock;
 import com.simibubi.create.content.contraptions.components.flywheel.FlywheelTileEntity;
+import com.simibubi.create.foundation.render.backend.instancing.IInstanceRendered;
 import com.simibubi.create.foundation.tileEntity.SmartTileEntity;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class EngineTileEntity extends SmartTileEntity {
+import java.util.List;
+
+public class EngineTileEntity extends SmartTileEntity implements IInstanceRendered {
 
 	public float appliedCapacity;
 	public float appliedSpeed;
@@ -29,9 +31,14 @@ public class EngineTileEntity extends SmartTileEntity {
 	public void addBehaviours(List<TileEntityBehaviour> behaviours) {
 	}
 
+	protected AxisAlignedBB cachedBoundingBox;
 	@Override
+	@OnlyIn(Dist.CLIENT)
 	public AxisAlignedBB getRenderBoundingBox() {
-		return super.getRenderBoundingBox().grow(1.5f);
+		if (cachedBoundingBox == null) {
+			cachedBoundingBox = super.getRenderBoundingBox().grow(1.5f);
+		}
+		return cachedBoundingBox;
 	}
 
 	@Override
@@ -69,16 +76,16 @@ public class EngineTileEntity extends SmartTileEntity {
 	}
 
 	public void detachWheel() {
-		if (poweredWheel.isRemoved())
+		if (poweredWheel == null || poweredWheel.isRemoved())
 			return;
 		poweredWheel.setRotation(0, 0);
 		FlywheelBlock.setConnection(world, poweredWheel.getPos(), poweredWheel.getBlockState(), null);
+		poweredWheel = null;
 	}
 
 	@Override
 	public void remove() {
-		if (poweredWheel != null)
-			detachWheel();
+		detachWheel();
 		super.remove();
 	}
 

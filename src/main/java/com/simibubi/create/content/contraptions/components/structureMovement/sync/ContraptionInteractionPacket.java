@@ -6,11 +6,13 @@ import com.simibubi.create.content.contraptions.components.structureMovement.Abs
 import com.simibubi.create.foundation.networking.SimplePacketBase;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.network.NetworkEvent.Context;
 
 public class ContraptionInteractionPacket extends SimplePacketBase {
@@ -45,22 +47,26 @@ public class ContraptionInteractionPacket extends SimplePacketBase {
 
 	@Override
 	public void handle(Supplier<Context> context) {
-		context.get()
-			.enqueueWork(() -> {
-				ServerPlayerEntity sender = context.get()
-					.getSender();
-				if (sender == null)
-					return;
-				Entity entityByID = sender.getServerWorld()
-					.getEntityByID(target);
-				if (!(entityByID instanceof AbstractContraptionEntity))
-					return;
-				AbstractContraptionEntity contraptionEntity = (AbstractContraptionEntity) entityByID;
-				if (contraptionEntity.handlePlayerInteraction(sender, localPos, face, interactionHand))
-					sender.swingHand(interactionHand, true);
-			});
-		context.get()
-			.setPacketHandled(true);
+		context.get().enqueueWork(() -> {
+			ServerPlayerEntity sender = context.get().getSender();
+			if (sender == null)
+				return;
+			Entity entityByID = sender.getServerWorld().getEntityByID(target);
+			if (!(entityByID instanceof AbstractContraptionEntity))
+				return;
+			AbstractContraptionEntity contraptionEntity = (AbstractContraptionEntity) entityByID;
+			double d = sender.getAttribute(ForgeMod.REACH_DISTANCE.get()).getValue();
+			if (!sender.canEntityBeSeen(entityByID))
+				d -= 3;
+			d *= d;
+			if (sender.getDistanceSq(entityByID) > d) {
+				// TODO log?
+				return;
+			}
+			if (contraptionEntity.handlePlayerInteraction(sender, localPos, face, interactionHand))
+				sender.swingHand(interactionHand, true);
+		});
+		context.get().setPacketHandled(true);
 	}
 
 }

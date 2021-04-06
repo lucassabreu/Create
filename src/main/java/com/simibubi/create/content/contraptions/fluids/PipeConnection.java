@@ -1,18 +1,13 @@
 package com.simibubi.create.content.contraptions.fluids;
 
-import java.util.Optional;
-import java.util.Random;
-import java.util.function.Predicate;
-
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.foundation.advancement.AllTriggers;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
 import com.simibubi.create.foundation.utility.BlockFace;
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Iterate;
-import com.simibubi.create.foundation.utility.LerpedFloat;
 import com.simibubi.create.foundation.utility.VecHelper;
-
+import com.simibubi.create.foundation.utility.animation.LerpedFloat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.CompoundNBT;
@@ -29,6 +24,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fml.DistExecutor;
+
+import java.util.Optional;
+import java.util.Random;
+import java.util.function.Predicate;
 
 public class PipeConnection {
 
@@ -358,11 +357,11 @@ public class PipeConnection {
 	public static final Random r = new Random();
 
 	public void spawnSplashOnRim(World world, BlockPos pos, FluidStack fluid) {
-		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> spawnSplashOnRimInner(world, pos, fluid));
+		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> spawnSplashOnRimInner(world, pos, fluid));
 	}
 
 	public void spawnParticles(World world, BlockPos pos, FluidStack fluid) {
-		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> spawnParticlesInner(world, pos, fluid));
+		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> spawnParticlesInner(world, pos, fluid));
 	}
 
 	@OnlyIn(Dist.CLIENT)
@@ -424,12 +423,12 @@ public class PipeConnection {
 //			if (inbound)
 //				return;
 //
-//			Vec3d directionVec = new Vec3d(side.getDirectionVec());
-//			Vec3d scaleVec = directionVec.scale(-.25f * side.getAxisDirection()
+//			Vector3d directionVec = new Vector3d(side.getDirectionVec());
+//			Vector3d scaleVec = directionVec.scale(-.25f * side.getAxisDirection()
 //				.getOffset());
 //			directionVec = directionVec.scale(inbound ? .35f : .45f);
 //			CreateClient.outliner.chaseAABB("pressure" + pos.toShortString() + side.getName() + String.valueOf(inbound),
-//				FluidPropagator.smallCenter.offset(directionVec.add(new Vec3d(pos)))
+//				FluidPropagator.smallCenter.offset(directionVec.add(new Vector3d(pos)))
 //					.grow(scaleVec.x, scaleVec.y, scaleVec.z)
 //					.expand(0, pressure / 64f, 0)
 //					.grow(1 / 64f));
@@ -440,7 +439,7 @@ public class PipeConnection {
 //		if (!hasFlow())
 //			return;
 //
-//		Vec3d directionVec = new Vec3d(side.getDirectionVec());
+//		Vector3d directionVec = new Vector3d(side.getDirectionVec());
 //		float size = 1 / 4f;
 //		float length = .5f;
 //		Flow flow = this.flow.get();
@@ -450,11 +449,11 @@ public class PipeConnection {
 //		if (flow.progress == null)
 //			return;
 //		float value = flow.progress.getValue();
-//		Vec3d start = directionVec.scale(inbound ? .5 : .5f - length);
-//		Vec3d offset = directionVec.scale(length * (inbound ? -1 : 1))
+//		Vector3d start = directionVec.scale(inbound ? .5 : .5f - length);
+//		Vector3d offset = directionVec.scale(length * (inbound ? -1 : 1))
 //			.scale(value);
 //
-//		Vec3d scale = new Vec3d(1, 1, 1).subtract(directionVec.scale(side.getAxisDirection()
+//		Vector3d scale = new Vector3d(1, 1, 1).subtract(directionVec.scale(side.getAxisDirection()
 //			.getOffset()))
 //			.scale(size);
 //		AxisAlignedBB bb = new AxisAlignedBB(start, start.add(offset)).offset(VecHelper.getCenterOf(pos))

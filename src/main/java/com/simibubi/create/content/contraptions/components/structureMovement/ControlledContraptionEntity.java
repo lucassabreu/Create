@@ -2,8 +2,10 @@ package com.simibubi.create.content.contraptions.components.structureMovement;
 
 import static com.simibubi.create.foundation.utility.AngleHelper.angleLerp;
 
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllEntityTypes;
 import com.simibubi.create.content.contraptions.components.structureMovement.bearing.BearingContraption;
+import com.simibubi.create.foundation.utility.MatrixStacker;
 import com.simibubi.create.foundation.utility.NBTHelper;
 import com.simibubi.create.foundation.utility.VecHelper;
 
@@ -46,10 +48,6 @@ public class ControlledContraptionEntity extends AbstractContraptionEntity {
 		return entity;
 	}
 
-	public boolean supportsTerrainCollision() {
-		return contraption instanceof TranslatingContraption;
-	}
-	
 	@Override
 		public Vector3d getContactPointMotion(Vector3d globalContactPoint) {
 			if (contraption instanceof TranslatingContraption)
@@ -151,8 +149,6 @@ public class ControlledContraptionEntity extends AbstractContraptionEntity {
 		}
 
 		Vector3d motion = getMotion();
-		if (motion.length() < 1 / 4098f)
-			setMotion(Vector3d.ZERO);
 		move(motion.x, motion.y, motion.z);
 		if (ContraptionCollider.collideBlocks(this))
 			getController().collided();
@@ -224,5 +220,19 @@ public class ControlledContraptionEntity extends AbstractContraptionEntity {
 	protected void handleStallInformation(float x, float y, float z, float angle) {
 		setPos(x, y, z);
 		this.angle = angle;
+	}
+
+	@Override
+	@OnlyIn(Dist.CLIENT)
+	public void doLocalTransforms(float partialTicks, MatrixStack[] matrixStacks) {
+		float angle = getAngle(partialTicks);
+		Axis axis = getRotationAxis();
+
+		for (MatrixStack stack : matrixStacks)
+			MatrixStacker.of(stack)
+						 .nudge(getEntityId())
+						 .centre()
+						 .rotate(angle, axis)
+						 .unCentre();
 	}
 }

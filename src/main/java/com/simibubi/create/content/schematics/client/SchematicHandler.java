@@ -10,14 +10,17 @@ import com.simibubi.create.AllItems;
 import com.simibubi.create.AllKeys;
 import com.simibubi.create.content.schematics.SchematicWorld;
 import com.simibubi.create.content.schematics.client.tools.Tools;
+import com.simibubi.create.content.schematics.filtering.SchematicInstances;
 import com.simibubi.create.content.schematics.item.SchematicItem;
 import com.simibubi.create.content.schematics.packet.SchematicPlacePacket;
 import com.simibubi.create.content.schematics.packet.SchematicSyncPacket;
 import com.simibubi.create.foundation.gui.ToolSelectionScreen;
 import com.simibubi.create.foundation.networking.AllPackets;
 import com.simibubi.create.foundation.renderState.SuperRenderTypeBuffer;
+import com.simibubi.create.foundation.utility.AnimationTickHolder;
 import com.simibubi.create.foundation.utility.outliner.AABBOutline;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
@@ -159,8 +162,7 @@ public class SchematicHandler {
 		transformation.applyGLTransformations(ms);
 
 		if (!renderers.isEmpty()) {
-			float pt = Minecraft.getInstance()
-				.getRenderPartialTicks();
+			float pt = AnimationTickHolder.getPartialTicks();
 			boolean lr = transformation.getScaleLR()
 				.get(pt) < 0;
 			boolean fb = transformation.getScaleFB()
@@ -205,7 +207,10 @@ public class SchematicHandler {
 			return;
 		if (mc.objectMouseOver instanceof BlockRayTraceResult) {
 			BlockRayTraceResult blockRayTraceResult = (BlockRayTraceResult) mc.objectMouseOver;
-			if (AllBlocks.SCHEMATICANNON.has(mc.world.getBlockState(blockRayTraceResult.getPos())))
+			BlockState clickedBlock = mc.world.getBlockState(blockRayTraceResult.getPos());
+			if (AllBlocks.SCHEMATICANNON.has(clickedBlock))
+				return;
+			if (AllBlocks.DEPLOYER.has(clickedBlock))
 				return;
 		}
 		currentTool.getTool()
@@ -317,6 +322,7 @@ public class SchematicHandler {
 		CompoundNBT nbt = activeSchematicItem.getTag();
 		nbt.putBoolean("Deployed", false);
 		activeSchematicItem.setTag(nbt);
+		SchematicInstances.clearHash(activeSchematicItem);
 		renderers.forEach(r -> r.setActive(false));
 		active = false;
 		markDirty();

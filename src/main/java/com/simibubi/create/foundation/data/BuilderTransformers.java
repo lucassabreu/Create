@@ -6,7 +6,6 @@ import static com.simibubi.create.foundation.data.CreateRegistrate.connectedText
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -22,21 +21,16 @@ import com.simibubi.create.content.contraptions.relays.encased.EncasedShaftBlock
 import com.simibubi.create.content.logistics.block.belts.tunnel.BeltTunnelBlock;
 import com.simibubi.create.content.logistics.block.belts.tunnel.BeltTunnelBlock.Shape;
 import com.simibubi.create.content.logistics.block.belts.tunnel.BeltTunnelItem;
-import com.simibubi.create.content.logistics.block.funnel.FunnelBlock;
-import com.simibubi.create.content.logistics.block.funnel.FunnelItem;
 import com.simibubi.create.content.logistics.block.inventories.CrateBlock;
+import com.simibubi.create.foundation.block.ItemUseOverrides;
 import com.simibubi.create.foundation.block.connected.CTSpriteShiftEntry;
 import com.simibubi.create.foundation.config.StressConfigDefaults;
-import com.simibubi.create.foundation.item.TooltipHelper;
 import com.tterrag.registrate.builders.BlockBuilder;
 import com.tterrag.registrate.util.nullness.NonNullUnaryOperator;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.item.DyeColor;
-import net.minecraft.item.Item;
-import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.state.properties.PistonType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Direction.Axis;
@@ -81,11 +75,8 @@ public class BuilderTransformers {
 					.withExistingParent(variant + "_valve_handle", p.modLoc("block/valve_handle"))
 					.texture("3", p.modLoc("block/valve_handle/valve_handle_" + variant)));
 			})
-			.onRegisterAfter(Item.class, v -> {
-				if (color != null)
-					TooltipHelper.referTo(v, AllBlocks.COPPER_VALVE_HANDLE);
-			})
 			.tag(AllBlockTags.BRITTLE.tag, AllBlockTags.VALVE_HANDLES.tag)
+			.onRegister(ItemUseOverrides::addBlock)
 			.item()
 			.tag(AllItemTags.VALVE_HANDLES.tag)
 			.build();
@@ -98,34 +89,6 @@ public class BuilderTransformers {
 			.onRegister(connectedTextures(new EncasedCTBehaviour(ct)))
 			.onRegister(casingConnectivity((block, cc) -> cc.makeCasing(block, ct)))
 			.simpleItem();
-	}
-
-	public static <B extends FunnelBlock> NonNullUnaryOperator<BlockBuilder<B, CreateRegistrate>> funnel(String type,
-		ResourceLocation particleTexture) {
-		return b -> {
-			return b.blockstate((c, p) -> {
-				Function<BlockState, ModelFile> model = s -> {
-					String powered =
-						s.method_28500(BlockStateProperties.POWERED).orElse(false) ? "_powered" : "";
-					return p.models()
-						.withExistingParent("block/" + type + "_funnel" + powered, p.modLoc("block/funnel/block"))
-						.texture("0", p.modLoc("block/" + type + "_funnel_plating"))
-						.texture("1", particleTexture)
-						.texture("2", p.modLoc("block/" + type + "_funnel" + powered))
-						.texture("3", p.modLoc("block/" + type + "_funnel_back"));
-				};
-				p.directionalBlock(c.get(), model);
-			})
-				.item(FunnelItem::new)
-				.model((c, p) -> {
-					p.withExistingParent("item/" + type + "_funnel", p.modLoc("block/funnel/item"))
-						.texture("0", p.modLoc("block/" + type + "_funnel_plating"))
-						.texture("1", particleTexture)
-						.texture("2", p.modLoc("block/" + type + "_funnel"))
-						.texture("3", p.modLoc("block/" + type + "_funnel_back"));
-				})
-				.build();
-		};
 	}
 
 	public static <B extends BeltTunnelBlock> NonNullUnaryOperator<BlockBuilder<B, CreateRegistrate>> beltTunnel(
@@ -167,7 +130,6 @@ public class BuilderTransformers {
 			.blockstate(new MechanicalPistonGenerator(type)::generate)
 			.addLayer(() -> RenderType::getCutoutMipped)
 			.transform(StressConfigDefaults.setImpact(4.0))
-			.onRegisterAfter(Item.class, v -> TooltipHelper.referTo(v, "block.create.mechanical_piston"))
 			.item()
 			.transform(ModelGen.customItemModel("mechanical_piston", type.getString(), "item"));
 	}

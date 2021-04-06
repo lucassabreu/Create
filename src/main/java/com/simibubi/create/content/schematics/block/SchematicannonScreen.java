@@ -35,6 +35,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
+
 public class SchematicannonScreen extends AbstractSimiContainerScreen<SchematicannonContainer> {
 
 	private static final AllGuiTextures BG_BOTTOM = AllGuiTextures.SCHEMATICANNON_BOTTOM;
@@ -261,7 +262,7 @@ public class SchematicannonScreen extends AbstractSimiContainerScreen<Schematica
 			renderBlueprintHighlight(matrixStack);
 
 		GuiGameElement.of(renderedItem)
-			.at(guiLeft + 230, guiTop + 190, -200)
+			.at(guiLeft + 230, guiTop + 110, -200)
 			.scale(5)
 			.render(matrixStack);
 
@@ -272,12 +273,10 @@ public class SchematicannonScreen extends AbstractSimiContainerScreen<Schematica
 
 		if (te.missingItem != null) {
 			stringWidth += 15;
-			matrixStack.push();
 			GuiGameElement.of(te.missingItem)
-				.at(guiLeft + 150, guiTop + 62, 100)
+				.at(guiLeft + 150, guiTop + 46, 100)
 				.scale(1)
 				.render(matrixStack);
-			matrixStack.pop();
 		}
 
 		textRenderer.drawWithShadow(matrixStack, msg, guiLeft + 20 + 102 - stringWidth / 2, guiTop + 50, 0xCCDDFF);
@@ -377,12 +376,12 @@ public class SchematicannonScreen extends AbstractSimiContainerScreen<Schematica
 			return tooltip;
 		}
 
-		float f = te.fuelLevel * 100;
-		tooltip.add(Lang.translate(_gunpowderLevel, "" + (int) f));
-		tooltip.add(Lang.translate(_shotsRemaining, "" + TextFormatting.BLUE + shotsLeft).formatted(GRAY)); // fixme
+		int fillPercent = (int) (te.fuelLevel * 100);
+		tooltip.add(Lang.translate(_gunpowderLevel, fillPercent));
+		tooltip.add(Lang.translate(_shotsRemaining, new StringTextComponent(Integer.toString(shotsLeft)).formatted(BLUE)).formatted(GRAY));
 		if (shotsLeftWithItems != shotsLeft)
-			tooltip
-				.add(Lang.translate(_shotsRemainingWithBackup, "" + TextFormatting.BLUE + shotsLeftWithItems).formatted(GRAY)); // fixme
+			tooltip.add(Lang.translate(_shotsRemainingWithBackup, new StringTextComponent(Integer.toString(shotsLeftWithItems)).formatted(BLUE)).formatted(GRAY));
+
 		return tooltip;
 	}
 
@@ -429,8 +428,7 @@ public class SchematicannonScreen extends AbstractSimiContainerScreen<Schematica
 	}
 
 	protected void sendOptionUpdate(Option option, boolean set) {
-		AllPackets.channel.sendToServer(ConfigureSchematicannonPacket.setOption(container.getTileEntity()
-			.getPos(), option, set));
+		AllPackets.channel.sendToServer(new ConfigureSchematicannonPacket(option, set));
 	}
 
 }

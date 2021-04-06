@@ -1,7 +1,6 @@
 package com.simibubi.create;
 
 import static com.simibubi.create.AllTags.NameSpace.FORGE;
-import static com.simibubi.create.AllTags.NameSpace.MC;
 import static com.simibubi.create.AllTags.NameSpace.MOD;
 import static com.simibubi.create.AllTags.NameSpace.TIC;
 
@@ -142,7 +141,7 @@ public class AllTags {
 	}
 
 	public static enum AllBlockTags {
-		WINDMILL_SAILS, FAN_HEATERS, WINDOWABLE, NON_MOVABLE, BRITTLE, SEATS, SAILS, VALVE_HANDLES, FAN_TRANSPARENT, SAFE_NBT, SLIMY_LOGS(TIC), BEACON_BASE_BLOCKS(MC)
+		WINDMILL_SAILS, FAN_HEATERS, WINDOWABLE, NON_MOVABLE, BRITTLE, SEATS, SAILS, VALVE_HANDLES, FAN_TRANSPARENT, SAFE_NBT, SLIMY_LOGS(TIC)
 
 		;
 
@@ -189,7 +188,8 @@ public class AllTags {
 		AllItemTags.CREATE_INGOTS.includeIn(AllItemTags.BEACON_PAYMENT);
 		AllItemTags.CREATE_INGOTS.includeIn(AllItemTags.INGOTS);
 
-		AllItemTags.UPRIGHT_ON_BELT.add(Items.GLASS_BOTTLE, Items.POTION, Items.SPLASH_POTION, Items.LINGERING_POTION);
+		AllItemTags.UPRIGHT_ON_BELT.add(Items.GLASS_BOTTLE, Items.POTION, Items.SPLASH_POTION, Items.LINGERING_POTION,
+			Items.HONEY_BOTTLE);
 
 		AllBlockTags.WINDMILL_SAILS.includeAll(BlockTags.WOOL);
 		
@@ -199,8 +199,10 @@ public class AllTags {
 		AllBlockTags.FAN_TRANSPARENT.includeAll(BlockTags.FENCES);
 		AllBlockTags.FAN_TRANSPARENT.add(Blocks.IRON_BARS);
 
-		AllBlockTags.FAN_HEATERS.add(Blocks.MAGMA_BLOCK, Blocks.CAMPFIRE, Blocks.LAVA, Blocks.FIRE);
-		
+		AllBlockTags.FAN_HEATERS.add(Blocks.MAGMA_BLOCK, Blocks.CAMPFIRE, Blocks.LAVA, Blocks.FIRE, Blocks.SOUL_FIRE,
+			Blocks.SOUL_CAMPFIRE);
+		AllBlockTags.SAFE_NBT.includeAll(BlockTags.SIGNS);
+
 		AllFluidTags.loadClass();
 	}
 }

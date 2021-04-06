@@ -1,6 +1,7 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.pulley;
 
 import com.simibubi.create.AllBlocks;
+import com.simibubi.create.content.contraptions.components.structureMovement.AssemblyException;
 import com.simibubi.create.content.contraptions.components.structureMovement.BlockMovementTraits;
 import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionCollider;
 import com.simibubi.create.content.contraptions.components.structureMovement.ControlledContraptionEntity;
@@ -8,7 +9,6 @@ import com.simibubi.create.content.contraptions.components.structureMovement.pis
 import com.simibubi.create.foundation.config.AllConfigs;
 import com.simibubi.create.foundation.tileEntity.behaviour.CenteredSideValueBoxTransform;
 import com.simibubi.create.foundation.tileEntity.behaviour.ValueBoxTransform;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.IWaterLoggable;
@@ -26,28 +26,47 @@ import net.minecraft.util.math.vector.Vector3d;
 public class PulleyTileEntity extends LinearActuatorTileEntity {
 
 	protected int initialOffset;
+	private float prevAnimatedOffset;
 
 	public PulleyTileEntity(TileEntityType<? extends PulleyTileEntity> type) {
 		super(type);
 	}
 
 	@Override
-	public AxisAlignedBB getRenderBoundingBox() {
-		return super.getRenderBoundingBox().expand(0, -offset, 0);
+	public AxisAlignedBB makeRenderBoundingBox() {
+		return super.makeRenderBoundingBox().expand(0, -offset, 0);
 	}
 
 	@Override
 	public double getMaxRenderDistanceSquared() {
 		return super.getMaxRenderDistanceSquared() + offset * offset;
 	}
+	
+	@Override
+	public void tick() {
+		super.tick();
+		if (isVirtual())
+			prevAnimatedOffset = offset;
+	}
 
 	@Override
-	protected void assemble() {
+	protected void assemble() throws AssemblyException {
 		if (!(world.getBlockState(pos)
 			.getBlock() instanceof PulleyBlock))
 			return;
 		if (speed == 0)
 			return;
+		int maxLength = AllConfigs.SERVER.kinetics.maxRopeLength.get();
+		int i = 1;
+		while (i <= maxLength) {
+			BlockPos ropePos = pos.down(i);
+			BlockState ropeState = world.getBlockState(ropePos);
+			if (!AllBlocks.ROPE.has(ropeState) && !AllBlocks.PULLEY_MAGNET.has(ropeState)) {
+				break;
+			}
+			++i;
+		}
+		offset = i - 1;
 		if (offset >= getExtensionRange() && getSpeed() > 0)
 			return;
 		if (offset <= 0 && getSpeed() < 0)
@@ -70,7 +89,7 @@ public class PulleyTileEntity extends LinearActuatorTileEntity {
 			if (!canAssembleStructure && getSpeed() > 0)
 				return;
 
-			for (int i = ((int) offset); i > 0; i--) {
+			for (i = ((int) offset); i > 0; i--) {
 				BlockPos offset = pos.down(i);
 				BlockState oldState = world.getBlockState(offset);
 				if (oldState.getBlock() instanceof IWaterLoggable && oldState.contains(BlockStateProperties.WATERLOGGED)
@@ -165,9 +184,10 @@ public class PulleyTileEntity extends LinearActuatorTileEntity {
 			return;
 
 		BlockPos posBelow = pos.down((int) (offset + getMovementSpeed()) + 1);
-		if (!BlockMovementTraits.movementNecessary(world, posBelow))
+		BlockState state = world.getBlockState(posBelow);
+		if (!BlockMovementTraits.movementNecessary(state, world, posBelow))
 			return;
-		if (BlockMovementTraits.isBrittle(world.getBlockState(posBelow)))
+		if (BlockMovementTraits.isBrittle(state))
 			return;
 
 		disassemble();
@@ -206,4 +226,20 @@ public class PulleyTileEntity extends LinearActuatorTileEntity {
 		return new CenteredSideValueBoxTransform((state, d) -> d == Direction.UP);
 	}
 
+	@Override
+	public float getInterpolatedOffset(float partialTicks) {
+		if (isVirtual())
+			return MathHelper.lerp(partialTicks, prevAnimatedOffset, offset);
+		boolean moving = running && (movedContraption == null || !movedContraption.isStalled());
+		return super.getInterpolatedOffset(moving ? partialTicks : 0.5f);
+	}
+	
+	public void animateOffset(float forcedOffset) {
+		offset = forcedOffset;
+	}
+
+	@Override
+	public boolean shouldRenderAsTE() {
+		return true;
+	}
 }

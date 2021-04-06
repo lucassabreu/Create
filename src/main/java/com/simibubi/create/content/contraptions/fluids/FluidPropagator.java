@@ -157,11 +157,13 @@ public class FluidPropagator {
 		if (PumpBlock.isPump(connectedState) && connectedState.get(PumpBlock.FACING)
 			.getAxis() == side.getAxis())
 			return false;
+		if (connectedState.contains(BlockStateProperties.HONEY_LEVEL))
+			return true;
 		if (BlockHelper.hasBlockSolidSide(connectedState, reader, connectedPos, side.getOpposite()))
 			return false;
 		if (!(connectedState.getMaterial()
 			.isReplaceable() && connectedState.getBlockHardness(reader, connectedPos) != -1)
-			&& !BlockHelper.hasBlockStateProperty(connectedState, BlockStateProperties.WATERLOGGED))
+			&& !connectedState.contains(BlockStateProperties.WATERLOGGED))
 			return false;
 		return true;
 	}
@@ -183,7 +185,7 @@ public class FluidPropagator {
 //	@Deprecated 
 //	public static OutlineParams showBlockFace(BlockFace face) {
 //		MutableObject<OutlineParams> params = new MutableObject<>(new OutlineParams());
-//		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
+//		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
 //			Vector3d directionVec = new Vector3d(face.getFace()
 //				.getDirectionVec());
 //			Vector3d scaleVec = directionVec.scale(-.25f * face.getFace()

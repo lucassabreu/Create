@@ -13,7 +13,6 @@ import com.simibubi.create.foundation.tileEntity.behaviour.ValueBox;
 import com.simibubi.create.foundation.utility.outliner.LineOutline.EndChasingLineOutline;
 import com.simibubi.create.foundation.utility.outliner.Outline.OutlineParams;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -57,10 +56,17 @@ public class Outliner {
 		return entry.outline.getParams();
 	}
 
+	public OutlineParams showAABB(Object slot, AxisAlignedBB bb, int ttl) {
+		createAABBOutlineIfMissing(slot, bb);
+		ChasingAABBOutline outline = getAndRefreshAABB(slot, ttl);
+		outline.prevBB = outline.targetBB = outline.bb = bb;
+		return outline.getParams();
+	}
+
 	public OutlineParams showAABB(Object slot, AxisAlignedBB bb) {
 		createAABBOutlineIfMissing(slot, bb);
 		ChasingAABBOutline outline = getAndRefreshAABB(slot);
-		outline.prevBB = outline.targetBB = bb;
+		outline.prevBB = outline.targetBB = outline.bb = bb;
 		return outline.getParams();
 	}
 
@@ -100,7 +106,7 @@ public class Outliner {
 	// Utility
 
 	private void createAABBOutlineIfMissing(Object slot, AxisAlignedBB bb) {
-		if (!outlines.containsKey(slot)) {
+		if (!outlines.containsKey(slot) || !(outlines.get(slot).outline instanceof AABBOutline)) {
 			ChasingAABBOutline outline = new ChasingAABBOutline(bb);
 			outlines.put(slot, new OutlineEntry(outline));
 		}
@@ -109,6 +115,12 @@ public class Outliner {
 	private ChasingAABBOutline getAndRefreshAABB(Object slot) {
 		OutlineEntry entry = outlines.get(slot);
 		entry.ticksTillRemoval = 1;
+		return (ChasingAABBOutline) entry.getOutline();
+	}
+
+	private ChasingAABBOutline getAndRefreshAABB(Object slot, int ttl) {
+		OutlineEntry entry = outlines.get(slot);
+		entry.ticksTillRemoval = ttl;
 		return (ChasingAABBOutline) entry.getOutline();
 	}
 
@@ -133,7 +145,7 @@ public class Outliner {
 		toClear.forEach(outlines::remove);
 	}
 
-	public void renderOutlines(MatrixStack ms, SuperRenderTypeBuffer buffer) {
+	public void renderOutlines(MatrixStack ms, SuperRenderTypeBuffer buffer, float pt) {
 		outlines.forEach((key, entry) -> {
 			Outline outline = entry.getOutline();
 			outline.params.alpha = 1;
@@ -143,14 +155,13 @@ public class Outliner {
 				float fadeticks = OutlineEntry.fadeTicks;
 				float lastAlpha = prevTicks >= 0 ? 1 : 1 + (prevTicks / fadeticks);
 				float currentAlpha = 1 + (entry.ticksTillRemoval / fadeticks);
-				float alpha = MathHelper.lerp(Minecraft.getInstance()
-					.getRenderPartialTicks(), lastAlpha, currentAlpha);
+				float alpha = MathHelper.lerp(pt, lastAlpha, currentAlpha);
 
 				outline.params.alpha = alpha * alpha * alpha;
 				if (outline.params.alpha < 1 / 8f)
 					return;
 			}
-			outline.render(ms, buffer);
+			outline.render(ms, buffer, pt);
 		});
 	}
 

@@ -1,40 +1,39 @@
 package com.simibubi.create.compat.jei.category;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.compat.jei.category.BlockCuttingCategory.CondensedBlockCuttingRecipe;
 import com.simibubi.create.compat.jei.category.animations.AnimatedSaw;
 import com.simibubi.create.foundation.gui.AllGuiTextures;
 import com.simibubi.create.foundation.item.ItemHelper;
-
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.IRecipeLayout;
 import mezz.jei.api.gui.ingredient.IGuiItemStackGroup;
 import mezz.jei.api.ingredients.IIngredients;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.StonecuttingRecipe;
 import net.minecraft.util.ResourceLocation;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class BlockCuttingCategory extends CreateRecipeCategory<CondensedBlockCuttingRecipe> {
 
 	private AnimatedSaw saw = new AnimatedSaw();
 
-	public BlockCuttingCategory() {
-		super(doubleItemIcon(AllBlocks.MECHANICAL_SAW.get(), Items.STONE_BRICK_STAIRS), emptyBackground(177, 70));
+	public BlockCuttingCategory(Item symbol) {
+		super(doubleItemIcon(AllBlocks.MECHANICAL_SAW.get(), symbol), emptyBackground(177, 70)); // Items.STONE_BRICK_STAIRS
 	}
 
 	@Override
 	public Class<? extends CondensedBlockCuttingRecipe> getRecipeClass() {
 		return CondensedBlockCuttingRecipe.class;
 	}
-
+	
 	@Override
 	public void setIngredients(CondensedBlockCuttingRecipe recipe, IIngredients ingredients) {
 		ingredients.setInputIngredients(recipe.getIngredients());
@@ -118,6 +117,11 @@ public class BlockCuttingCategory extends CreateRecipeCategory<CondensedBlockCut
 				condensed.add(cr);
 			}
 			return condensed;
+		}
+		
+		@Override
+		public boolean isDynamic() {
+			return true;
 		}
 
 	}

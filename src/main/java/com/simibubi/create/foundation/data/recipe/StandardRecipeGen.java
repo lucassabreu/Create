@@ -1,17 +1,5 @@
 package com.simibubi.create.foundation.data.recipe;
 
-import static com.simibubi.create.foundation.data.recipe.Mods.EID;
-import static com.simibubi.create.foundation.data.recipe.Mods.IE;
-import static com.simibubi.create.foundation.data.recipe.Mods.INF;
-import static com.simibubi.create.foundation.data.recipe.Mods.MEK;
-import static com.simibubi.create.foundation.data.recipe.Mods.MW;
-import static com.simibubi.create.foundation.data.recipe.Mods.SM;
-import static com.simibubi.create.foundation.data.recipe.Mods.TH;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.UnaryOperator;
-
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonArray;
@@ -27,15 +15,10 @@ import com.simibubi.create.foundation.utility.Lang;
 import com.tterrag.registrate.util.entry.BlockEntry;
 import com.tterrag.registrate.util.entry.ItemEntry;
 import com.tterrag.registrate.util.entry.ItemProviderEntry;
-
 import net.minecraft.advancements.criterion.ItemPredicate;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
-import net.minecraft.data.CookingRecipeBuilder;
-import net.minecraft.data.DataGenerator;
-import net.minecraft.data.IFinishedRecipe;
-import net.minecraft.data.ShapedRecipeBuilder;
-import net.minecraft.data.ShapelessRecipeBuilder;
+import net.minecraft.data.*;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.item.crafting.CookingRecipeSerializer;
@@ -50,6 +33,12 @@ import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.common.crafting.conditions.ICondition;
 import net.minecraftforge.common.crafting.conditions.ModLoadedCondition;
 import net.minecraftforge.common.crafting.conditions.NotCondition;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.UnaryOperator;
+
+import static com.simibubi.create.foundation.data.recipe.Mods.*;
 
 @SuppressWarnings("unused")
 public class StandardRecipeGen extends CreateRecipeProvider {
@@ -319,6 +308,23 @@ public class StandardRecipeGen extends CreateRecipeProvider {
 				.patternLine("A")
 				.patternLine("P")),
 
+		GANTRY_PINION = create(AllBlocks.GANTRY_CARRIAGE).unlockedBy(I::andesiteCasing)
+			.viaShaped(b -> b.key('B', ItemTags.PLANKS)
+				.key('S', I.cog())
+				.key('C', I.andesiteCasing())
+				.key('I', I.shaft())
+				.patternLine(" B ")
+				.patternLine("ICI")
+				.patternLine(" S ")),
+
+		GANTRY_SHAFT = create(AllBlocks.GANTRY_SHAFT).returns(8)
+			.unlockedBy(I::andesite)
+			.viaShaped(b -> b.key('A', I.andesite())
+				.key('R', I.redstone())
+				.patternLine("A")
+				.patternLine("R")
+				.patternLine("A")),
+
 		ANALOG_LEVER = create(AllBlocks.ANALOG_LEVER).unlockedBy(I::andesite)
 			.viaShaped(b -> b.key('S', I.andesiteCasing())
 				.key('P', Tags.Items.RODS_WOODEN)
@@ -568,10 +574,26 @@ public class StandardRecipeGen extends CreateRecipeProvider {
 				.patternLine("II")
 				.patternLine("AA")),
 
+		SMART_CHUTE = create(AllBlocks.SMART_CHUTE).unlockedBy(AllBlocks.CHUTE::get)
+			.viaShaped(b -> b.key('P', I.electronTube())
+				.key('S', AllBlocks.CHUTE.get())
+				.key('I', I.brassSheet())
+				.patternLine("I")
+				.patternLine("S")
+				.patternLine("P")),
+
 		DEPOT = create(AllBlocks.DEPOT).unlockedBy(I::andesiteCasing)
 			.viaShaped(b -> b.key('A', I.andesite())
 				.key('I', I.andesiteCasing())
 				.patternLine("A")
+				.patternLine("I")),
+
+		WEIGHTED_EJECTOR = create(AllBlocks.WEIGHTED_EJECTOR).unlockedBy(I::andesiteCasing)
+			.viaShaped(b -> b.key('A', I.goldSheet())
+				.key('D', AllBlocks.DEPOT.get())
+				.key('I', I.cog())
+				.patternLine("A")
+				.patternLine("D")
 				.patternLine("I")),
 
 		MECHANICAL_ARM = create(AllBlocks.MECHANICAL_ARM::get).unlockedBy(I::brassCasing)
@@ -644,6 +666,15 @@ public class StandardRecipeGen extends CreateRecipeProvider {
 
 		LINEAR_CHASSIS_CYCLE =
 			conversionCycle(ImmutableList.of(AllBlocks.LINEAR_CHASSIS, AllBlocks.SECONDARY_LINEAR_CHASSIS)),
+
+		STICKER = create(AllBlocks.STICKER).returns(1)
+			.unlockedBy(I::andesite)
+			.viaShaped(b -> b.key('I', I.andesite())
+				.key('C', Tags.Items.COBBLESTONE)
+				.key('R', I.redstone())
+				.key('S', Tags.Items.SLIMEBALLS)
+				.patternLine("ISI")
+				.patternLine("CRC")),
 
 		MINECART = create(() -> Items.MINECART).withSuffix("_from_contraption_cart")
 			.unlockedBy(AllBlocks.CART_ASSEMBLER::get)
@@ -749,11 +780,11 @@ public class StandardRecipeGen extends CreateRecipeProvider {
 	REDSTONE_CONTACT = create(AllBlocks.REDSTONE_CONTACT).returns(2)
 		.unlockedBy(I::brassCasing)
 		.viaShaped(b -> b.key('W', I.redstone())
-			.key('D', I.brassCasing())
-			.key('S', I.iron())
-			.patternLine("WDW")
+			.key('C', Blocks.COBBLESTONE)
+			.key('S', I.ironSheet())
 			.patternLine(" S ")
-			.patternLine("WDW")),
+			.patternLine("CWC")
+			.patternLine("CCC")),
 
 		ANDESITE_FUNNEL = create(AllBlocks.ANDESITE_FUNNEL).returns(2)
 			.unlockedBy(I::andesite)

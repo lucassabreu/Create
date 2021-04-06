@@ -1,10 +1,8 @@
 package com.simibubi.create.content.curiosities;
 
-import java.util.List;
 import java.util.Random;
 
 import com.simibubi.create.AllItems;
-import com.simibubi.create.foundation.advancement.AllTriggers;
 import com.simibubi.create.foundation.config.AllConfigs;
 import com.simibubi.create.foundation.config.CRecipes;
 import com.simibubi.create.foundation.utility.ColorHelper;
@@ -13,7 +11,6 @@ import com.simibubi.create.foundation.utility.VecHelper;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -21,7 +18,6 @@ import net.minecraft.particles.ParticleTypes;
 import net.minecraft.tileentity.BeaconTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceContext;
@@ -93,7 +89,7 @@ public class ChromaticCompoundItem extends Item {
 		if (y < 0 && y - yMotion < -10 && config.enableShadowSteelRecipe.get()) {
 			ItemStack newStack = AllItems.SHADOW_STEEL.asStack();
 			newStack.setCount(stack.getCount());
-			data.putBoolean("FromVoid", true);
+			data.putBoolean("JustCreated", true);
 			entity.setItem(newStack);
 		}
 
@@ -106,7 +102,7 @@ public class ChromaticCompoundItem extends Item {
 			ItemEntity newEntity = new ItemEntity(world, entity.getX(), entity.getY(), entity.getZ(), newStack);
 			newEntity.setMotion(entity.getMotion());
 			newEntity.getPersistentData()
-				.putBoolean("FromLight", true);
+				.putBoolean("JustCreated", true);
 			itemData.remove("CollectingLight");
 			world.addEntity(newEntity);
 
@@ -123,10 +119,8 @@ public class ChromaticCompoundItem extends Item {
 		int entityZ = MathHelper.floor(entity.getZ());
 		int localWorldHeight = world.getHeight(Heightmap.Type.WORLD_SURFACE, entityX, entityZ);
 
-		BlockPos.Mutable testPos = new BlockPos.Mutable(
-				entityX,
-				Math.min(MathHelper.floor(entity.getY()), localWorldHeight),
-				entityZ);
+		BlockPos.Mutable testPos =
+			new BlockPos.Mutable(entityX, Math.min(MathHelper.floor(entity.getY()), localWorldHeight), entityZ);
 
 		while (testPos.getY() > 0) {
 			testPos.move(Direction.DOWN);
@@ -136,11 +130,13 @@ public class ChromaticCompoundItem extends Item {
 			if (state.getBlock() == Blocks.BEACON) {
 				TileEntity te = world.getTileEntity(testPos);
 
-				if (!(te instanceof BeaconTileEntity)) break;
+				if (!(te instanceof BeaconTileEntity))
+					break;
 
 				BeaconTileEntity bte = (BeaconTileEntity) te;
 
-				if (bte.getLevels() != 0 && !bte.beamSegments.isEmpty()) isOverBeacon = true;
+				if (bte.getLevels() != 0 && !bte.beamSegments.isEmpty())
+					isOverBeacon = true;
 
 				break;
 			}
@@ -149,13 +145,8 @@ public class ChromaticCompoundItem extends Item {
 		if (isOverBeacon) {
 			ItemStack newStack = AllItems.REFINED_RADIANCE.asStack();
 			newStack.setCount(stack.getCount());
-			data.putBoolean("FromLight", true);
+			data.putBoolean("JustCreated", true);
 			entity.setItem(newStack);
-
-			List<ServerPlayerEntity> players =
-				world.getEntitiesWithinAABB(ServerPlayerEntity.class, new AxisAlignedBB(entity.getBlockPos()).grow(8));
-			players.forEach(AllTriggers.ABSORBED_LIGHT::trigger);
-
 			return false;
 		}
 

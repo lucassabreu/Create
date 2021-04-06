@@ -1,28 +1,12 @@
 package com.simibubi.create.content.contraptions.relays.elementary;
 
-import static com.simibubi.create.content.contraptions.base.RotatedPillarKineticBlock.AXIS;
-
-import java.util.List;
-import java.util.function.Predicate;
-
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllShapes;
-import com.simibubi.create.content.contraptions.base.DirectionalKineticBlock;
-import com.simibubi.create.content.contraptions.base.HorizontalKineticBlock;
-import com.simibubi.create.content.contraptions.base.IRotate;
-import com.simibubi.create.foundation.advancement.AllTriggers;
-import com.simibubi.create.foundation.utility.Iterate;
-import com.simibubi.create.foundation.utility.VecHelper;
-import com.simibubi.create.foundation.utility.placement.IPlacementHelper;
-import com.simibubi.create.foundation.utility.placement.PlacementHelpers;
-import com.simibubi.create.foundation.utility.placement.PlacementOffset;
-
 import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.BlockItemUseContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUseContext;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Direction.Axis;
@@ -30,6 +14,19 @@ import net.minecraft.util.Direction.AxisDirection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.world.World;
+
+import java.util.List;
+import java.util.function.Predicate;
+import com.simibubi.create.AllShapes;
+import com.simibubi.create.content.contraptions.base.DirectionalKineticBlock;
+import com.simibubi.create.content.contraptions.base.HorizontalKineticBlock;
+import com.simibubi.create.foundation.advancement.AllTriggers;
+import com.simibubi.create.foundation.utility.Iterate;
+import com.simibubi.create.foundation.utility.placement.IPlacementHelper;
+import com.simibubi.create.foundation.utility.placement.PlacementHelpers;
+import com.simibubi.create.foundation.utility.placement.PlacementOffset;
+
+import static com.simibubi.create.content.contraptions.base.RotatedPillarKineticBlock.AXIS;
 
 public class CogwheelBlockItem extends BlockItem {
 
@@ -47,49 +44,27 @@ public class CogwheelBlockItem extends BlockItem {
 	}
 
 	@Override
-	public ActionResultType tryPlace(BlockItemUseContext context) {
+	public ActionResultType onItemUseFirst(ItemStack stack, ItemUseContext context) {
 		World world = context.getWorld();
-		BlockPos pos = context.getPos()
-			.offset(context.getFace()
-				.getOpposite());
+		BlockPos pos = context.getPos();
 		BlockState state = world.getBlockState(pos);
 
 		IPlacementHelper helper = PlacementHelpers.get(placementHelperId);
 		PlayerEntity player = context.getPlayer();
-
-		if (helper.matchesState(state)) {
-			PlacementOffset offset = helper.getOffset(world, state, pos,
-				new BlockRayTraceResult(context.getHitVec(), context.getFace(), pos, true));
-
-			if (!offset.isReplaceable(world))
-				return super.tryPlace(context);
-
-			offset.placeInWorld(world, this, player, context.getItem());
-			triggerShiftingGearsAdvancement(world, new BlockPos(offset.getPos()), offset.getTransform()
-				.apply(getBlock().getDefaultState()), player);
-
-			return ActionResultType.SUCCESS;
+		BlockRayTraceResult ray = new BlockRayTraceResult(context.getHitVec(), context.getFace(), pos, true);
+		if (helper.matchesState(state) && player != null && !player.isSneaking()) {
+			return helper.getOffset(player, world, state, pos, ray).placeInWorld(world, this, player, context.getHand(), ray);
 		}
 
 		if (integratedCogHelperId != -1) {
 			helper = PlacementHelpers.get(integratedCogHelperId);
 
-			if (helper.matchesState(state)) {
-				PlacementOffset offset = helper.getOffset(world, state, pos,
-					new BlockRayTraceResult(context.getHitVec(), context.getFace(), pos, true));
-
-				if (!offset.isReplaceable(world))
-					return super.tryPlace(context);
-
-				offset.placeInWorld(world, this, player, context.getItem());
-				triggerShiftingGearsAdvancement(world, new BlockPos(offset.getPos()), offset.getTransform()
-					.apply(getBlock().getDefaultState()), player);
-
-				return ActionResultType.SUCCESS;
+			if (helper.matchesState(state) && player != null && !player.isSneaking()) {
+				return helper.getOffset(player, world, state, pos, ray).placeInWorld(world, this, player, context.getHand(), ray);
 			}
 		}
 
-		return super.tryPlace(context);
+		return super.onItemUseFirst(stack, context);
 	}
 
 	@Override
@@ -123,7 +98,7 @@ public class CogwheelBlockItem extends BlockItem {
 							continue;
 						if (blockState.get(CogWheelBlock.AXIS) != axis)
 							continue;
-						if (AllBlocks.LARGE_COGWHEEL.has(blockState) == large)
+						if (ICogWheel.isLargeCog(blockState) == large)
 							continue;
 						AllTriggers.triggerFor(AllTriggers.SHIFTING_GEARS, player);
 					}
@@ -137,11 +112,11 @@ public class CogwheelBlockItem extends BlockItem {
 
 		@Override
 		public Predicate<ItemStack> getItemPredicate() {
-			return AllBlocks.COGWHEEL::isIn;
+			return ((Predicate<ItemStack>) ICogWheel::isSmallCogItem).and(ICogWheel::isDedicatedCogItem);
 		}
 
 		@Override
-		public PlacementOffset getOffset(World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
+		public PlacementOffset getOffset(PlayerEntity player, World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
 			if (hitOnShaft(state, ray))
 				return PlacementOffset.fail();
 
@@ -152,7 +127,7 @@ public class CogwheelBlockItem extends BlockItem {
 				for (Direction dir : directions) {
 					BlockPos newPos = pos.offset(dir);
 
-					if (hasLargeCogwheelNeighbor(world, newPos, state.get(AXIS)))
+					if (!CogWheelBlock.isValidCogwheelPosition(false, world, newPos, state.get(AXIS)))
 						continue;
 
 					if (!world.getBlockState(newPos)
@@ -167,14 +142,7 @@ public class CogwheelBlockItem extends BlockItem {
 				return PlacementOffset.fail();
 			}
 
-			return super.getOffset(world, state, pos, ray);
-		}
-
-		@Override
-		public void renderAt(BlockPos pos, BlockState state, BlockRayTraceResult ray, PlacementOffset offset) {
-			IPlacementHelper.renderArrow(VecHelper.getCenterOf(pos), VecHelper.getCenterOf(offset.getPos()),
-				Direction.getFacingFromAxis(Direction.AxisDirection.POSITIVE, state.get(AXIS)),
-				((CogWheelBlock) state.getBlock()).isLarge ? 1.5D : 0.75D);
+			return super.getOffset(player, world, state, pos, ray);
 		}
 	}
 
@@ -183,11 +151,11 @@ public class CogwheelBlockItem extends BlockItem {
 
 		@Override
 		public Predicate<ItemStack> getItemPredicate() {
-			return AllBlocks.LARGE_COGWHEEL::isIn;
+			return ((Predicate<ItemStack>) ICogWheel::isLargeCogItem).and(ICogWheel::isDedicatedCogItem);
 		}
 
 		@Override
-		public PlacementOffset getOffset(World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
+		public PlacementOffset getOffset(PlayerEntity player, World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
 			if (hitOnShaft(state, ray))
 				return PlacementOffset.fail();
 
@@ -199,6 +167,10 @@ public class CogwheelBlockItem extends BlockItem {
 				for (Direction dir : directions) {
 					BlockPos newPos = pos.offset(dir)
 						.offset(side);
+
+					if (!CogWheelBlock.isValidCogwheelPosition(true, world, newPos, dir.getAxis()))
+						continue;
+
 					if (!world.getBlockState(newPos)
 						.getMaterial()
 						.isReplaceable())
@@ -210,7 +182,7 @@ public class CogwheelBlockItem extends BlockItem {
 				return PlacementOffset.fail();
 			}
 
-			return super.getOffset(world, state, pos, ray);
+			return super.getOffset(player, world, state, pos, ray);
 		}
 	}
 
@@ -223,7 +195,7 @@ public class CogwheelBlockItem extends BlockItem {
 		}
 
 		@Override
-		public PlacementOffset getOffset(World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
+		public PlacementOffset getOffset(PlayerEntity player, World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
 			// diagonal gears of different size
 			Direction closest = IPlacementHelper.orderedByDistanceExceptAxis(pos, ray.getHitVec(), state.get(AXIS))
 				.get(0);
@@ -238,19 +210,13 @@ public class CogwheelBlockItem extends BlockItem {
 					.isReplaceable())
 					continue;
 
-				if (AllBlocks.COGWHEEL.has(state) && hasSmallCogwheelNeighbor(world, newPos, state.get(AXIS)))
+				if (!CogWheelBlock.isValidCogwheelPosition(ICogWheel.isLargeCog(state), world, newPos, state.get(AXIS)))
 					continue;
 
 				return PlacementOffset.success(newPos, s -> s.with(AXIS, state.get(AXIS)));
 			}
 
 			return PlacementOffset.fail();
-		}
-
-		@Override
-		public void renderAt(BlockPos pos, BlockState state, BlockRayTraceResult ray, PlacementOffset offset) {
-			IPlacementHelper.renderArrow(VecHelper.getCenterOf(pos), VecHelper.getCenterOf(offset.getPos()),
-				Direction.getFacingFromAxis(Direction.AxisDirection.POSITIVE, state.get(AXIS)), 1D);
 		}
 
 		protected boolean hitOnShaft(BlockState state, BlockRayTraceResult ray) {
@@ -261,30 +227,6 @@ public class CogwheelBlockItem extends BlockItem {
 					.subtract(ray.getHitVec()
 						.align(Iterate.axisSet)));
 		}
-
-		static public boolean hasLargeCogwheelNeighbor(World world, BlockPos pos, Direction.Axis axis) {
-			for (Direction dir : Iterate.directions) {
-				if (dir.getAxis() == axis)
-					continue;
-
-				if (AllBlocks.LARGE_COGWHEEL.has(world.getBlockState(pos.offset(dir))))
-					return true;
-			}
-
-			return false;
-		}
-
-		static public boolean hasSmallCogwheelNeighbor(World world, BlockPos pos, Direction.Axis axis) {
-			for (Direction dir : Iterate.directions) {
-				if (dir.getAxis() == axis)
-					continue;
-
-				if (AllBlocks.COGWHEEL.has(world.getBlockState(pos.offset(dir))))
-					return true;
-			}
-
-			return false;
-		}
 	}
 
 	@MethodsReturnNonnullByDefault
@@ -292,17 +234,16 @@ public class CogwheelBlockItem extends BlockItem {
 
 		@Override
 		public Predicate<ItemStack> getItemPredicate() {
-			return AllBlocks.LARGE_COGWHEEL::isIn;
+			return ((Predicate<ItemStack>) ICogWheel::isLargeCogItem).and(ICogWheel::isDedicatedCogItem);
 		}
 
 		@Override
 		public Predicate<BlockState> getStatePredicate() {
-			return s -> !AllBlocks.COGWHEEL.has(s) && s.getBlock() instanceof IRotate
-				&& ((IRotate) s.getBlock()).hasIntegratedCogwheel(null, null, null);
+			return s -> !ICogWheel.isDedicatedCogWheel(s.getBlock()) && ICogWheel.isSmallCog(s);
 		}
 
 		@Override
-		public PlacementOffset getOffset(World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
+		public PlacementOffset getOffset(PlayerEntity player, World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
 			Direction face = ray.getFace();
 			Axis newAxis;
 
@@ -330,8 +271,7 @@ public class CogwheelBlockItem extends BlockItem {
 					.isReplaceable())
 					continue;
 
-				if (DiagonalCogHelper.hasLargeCogwheelNeighbor(world, newPos, newAxis)
-					|| DiagonalCogHelper.hasSmallCogwheelNeighbor(world, newPos, newAxis))
+				if (!CogWheelBlock.isValidCogwheelPosition(false, world, newPos, newAxis))
 					return PlacementOffset.fail();
 
 				return PlacementOffset.success(newPos, s -> s.with(CogWheelBlock.AXIS, newAxis));
@@ -340,12 +280,5 @@ public class CogwheelBlockItem extends BlockItem {
 			return PlacementOffset.fail();
 		}
 
-		@Override
-		public void renderAt(BlockPos pos, BlockState state, BlockRayTraceResult ray, PlacementOffset offset) {
-			IPlacementHelper.renderArrow(VecHelper.getCenterOf(pos), VecHelper.getCenterOf(offset.getPos()),
-				Direction.getFacingFromAxis(Direction.AxisDirection.POSITIVE, offset.getTransform()
-					.apply(AllBlocks.LARGE_COGWHEEL.getDefaultState())
-					.get(AXIS)));
-		}
 	}
 }

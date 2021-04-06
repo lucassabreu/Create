@@ -1,14 +1,5 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.chassis;
 
-import static net.minecraft.state.properties.BlockStateProperties.AXIS;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.contraptions.components.structureMovement.BlockMovementTraits;
 import com.simibubi.create.foundation.config.AllConfigs;
@@ -19,7 +10,6 @@ import com.simibubi.create.foundation.tileEntity.behaviour.scrollvalue.BulkScrol
 import com.simibubi.create.foundation.tileEntity.behaviour.scrollvalue.ScrollValueBehaviour;
 import com.simibubi.create.foundation.utility.Iterate;
 import com.simibubi.create.foundation.utility.Lang;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.tileentity.TileEntity;
@@ -30,6 +20,10 @@ import net.minecraft.util.Direction.AxisDirection;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
+
+import java.util.*;
+
+import static net.minecraft.state.properties.BlockStateProperties.AXIS;
 
 public class ChassisTileEntity extends SmartTileEntity {
 
@@ -48,7 +42,7 @@ public class ChassisTileEntity extends SmartTileEntity {
 		range.between(1, max);
 		range
 				.withClientCallback(
-						i -> DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> ChassisRangeDisplay.display(this)));
+						i -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ChassisRangeDisplay.display(this)));
 		range.value = max / 2;
 		behaviours.add(range);
 	}
@@ -76,12 +70,12 @@ public class ChassisTileEntity extends SmartTileEntity {
 	}
 
 	public List<ChassisTileEntity> collectChassisGroup() {
-		List<BlockPos> frontier = new ArrayList<>();
+		Queue<BlockPos> frontier = new LinkedList<>();
 		List<ChassisTileEntity> collected = new ArrayList<>();
 		Set<BlockPos> visited = new HashSet<>();
 		frontier.add(pos);
 		while (!frontier.isEmpty()) {
-			BlockPos current = frontier.remove(0);
+			BlockPos current = frontier.poll();
 			if (visited.contains(current))
 				continue;
 			visited.add(current);
@@ -96,7 +90,7 @@ public class ChassisTileEntity extends SmartTileEntity {
 		return collected;
 	}
 
-	public boolean addAttachedChasses(List<BlockPos> frontier, Set<BlockPos> visited) {
+	public boolean addAttachedChasses(Queue<BlockPos> frontier, Set<BlockPos> visited) {
 		BlockState state = getBlockState();
 		if (!(state.getBlock() instanceof AbstractChassisBlock))
 			return false;
@@ -124,8 +118,6 @@ public class ChassisTileEntity extends SmartTileEntity {
 
 		// Collect group of connected linear chassis
 		for (Direction offset : Iterate.directions) {
-			if (offset.getAxis() == axis)
-				continue;
 			BlockPos current = pos.offset(offset);
 			if (visited.contains(current))
 				continue;
@@ -166,7 +158,7 @@ public class ChassisTileEntity extends SmartTileEntity {
 					break;
 
 				// Ignore replaceable Blocks and Air-like
-				if (!BlockMovementTraits.movementNecessary(world, current))
+				if (!BlockMovementTraits.movementNecessary(currentState, world, current))
 					break;
 				if (BlockMovementTraits.isBrittle(currentState))
 					break;
@@ -207,7 +199,7 @@ public class ChassisTileEntity extends SmartTileEntity {
 					continue;
 				if (!searchPos.withinDistance(pos, chassisRange + .5f))
 					continue;
-				if (!BlockMovementTraits.movementNecessary(world, searchPos))
+				if (!BlockMovementTraits.movementNecessary(searchedState, world, searchPos))
 					continue;
 				if (BlockMovementTraits.isBrittle(searchedState))
 					continue;

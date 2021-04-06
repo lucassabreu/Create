@@ -1,11 +1,5 @@
 package com.simibubi.create.content.schematics.block;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
-
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.AllSoundEvents;
@@ -24,11 +18,12 @@ import com.simibubi.create.foundation.config.AllConfigs;
 import com.simibubi.create.foundation.config.CSchematics;
 import com.simibubi.create.foundation.item.ItemHelper;
 import com.simibubi.create.foundation.item.ItemHelper.ExtractionCountMode;
+import com.simibubi.create.foundation.render.backend.instancing.IInstanceRendered;
 import com.simibubi.create.foundation.tileEntity.SmartTileEntity;
 import com.simibubi.create.foundation.tileEntity.TileEntityBehaviour;
 import com.simibubi.create.foundation.utility.BlockHelper;
 import com.simibubi.create.foundation.utility.Iterate;
-
+import com.simibubi.create.foundation.utility.NBTProcessors;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.PistonHeadBlock;
@@ -66,8 +61,15 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.items.wrapper.EmptyHandler;
 
-public class SchematicannonTileEntity extends SmartTileEntity implements INamedContainerProvider {
+import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class SchematicannonTileEntity extends SmartTileEntity implements INamedContainerProvider, IInstanceRendered {
 
 	public static final int NEIGHBOUR_CHECKING = 100;
 	public static final int MAX_ANCHOR_DISTANCE = 256;
@@ -99,7 +101,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 
 	public BlockPos target;
 	public BlockPos previousTarget;
-	public List<IItemHandler> attachedInventories;
+	public LinkedHashSet<LazyOptional<IItemHandler>> attachedInventories;
 	public List<LaunchedItem> flyingBlocks;
 	public MaterialChecklist checklist;
 
@@ -134,14 +136,13 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 	public SchematicannonTileEntity(TileEntityType<?> tileEntityTypeIn) {
 		super(tileEntityTypeIn);
 		setLazyTickRate(30);
-		attachedInventories = new LinkedList<>();
+		attachedInventories = new LinkedHashSet<>();
 		flyingBlocks = new LinkedList<>();
 		inventory = new SchematicannonInventory(this);
 		statusMsg = "idle";
 		state = State.STOPPED;
 		printingEntityIndex = -1;
 		replaceMode = 2;
-		neighbourCheckCooldown = NEIGHBOUR_CHECKING;
 		checklist = new MaterialChecklist();
 	}
 
@@ -161,7 +162,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 				LazyOptional<IItemHandler> capability =
 					tileEntity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, facing.getOpposite());
 				if (capability.isPresent()) {
-					attachedInventories.add(capability.orElse(null));
+					attachedInventories.add(capability);
 				}
 			}
 		}
@@ -174,7 +175,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 			if (compound.contains("CurrentPos"))
 				currentPos = NBTUtil.readBlockPos(compound.getCompound("CurrentPos"));
 		}
-		
+
 		// Gui information
 		statusMsg = compound.getString("Status");
 		schematicProgress = compound.getFloat("Progress");
@@ -184,17 +185,17 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		blocksPlaced = compound.getInt("AmountPlaced");
 		blocksToPlace = compound.getInt("AmountToPlace");
 		printingEntityIndex = compound.getInt("EntityProgress");
-		
+
 		missingItem = null;
 		if (compound.contains("MissingItem"))
 			missingItem = ItemStack.read(compound.getCompound("MissingItem"));
-		
+
 		// Settings
 		CompoundNBT options = compound.getCompound("Options");
 		replaceMode = options.getInt("ReplaceMode");
 		skipMissing = options.getBoolean("SkipMissing");
 		replaceTileEntities = options.getBoolean("ReplaceTileEntities");
-		
+
 		// Printer & Flying Blocks
 		if (compound.contains("Target"))
 			target = NBTUtil.readBlockPos(compound.getCompound("Target"));
@@ -249,7 +250,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 					compound.put("CurrentPos", NBTUtil.writeBlockPos(currentPos));
 			}
 		}
-		
+
 		// Gui information
 		compound.putFloat("Progress", schematicProgress);
 		compound.putFloat("PaperProgress", bookPrintingProgress);
@@ -259,17 +260,17 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		compound.putInt("AmountPlaced", blocksPlaced);
 		compound.putInt("AmountToPlace", blocksToPlace);
 		compound.putInt("EntityProgress", printingEntityIndex);
-		
+
 		if (missingItem != null)
 			compound.put("MissingItem", missingItem.serializeNBT());
-		
+
 		// Settings
 		CompoundNBT options = new CompoundNBT();
 		options.putInt("ReplaceMode", replaceMode);
 		options.putBoolean("SkipMissing", skipMissing);
 		options.putBoolean("ReplaceTileEntities", replaceTileEntities);
 		compound.put("Options", options);
-		
+
 		// Printer & Flying Blocks
 		if (target != null)
 			compound.put("Target", NBTUtil.writeBlockPos(target));
@@ -285,7 +286,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 	public void tick() {
 		super.tick();
 
-		if (neighbourCheckCooldown-- <= 0) {
+		if (state != State.STOPPED && neighbourCheckCooldown-- <= 0) {
 			neighbourCheckCooldown = NEIGHBOUR_CHECKING;
 			findInventories();
 		}
@@ -374,11 +375,13 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		}
 
 		if (missingItem == null && !positionNotLoaded) {
-			advanceCurrentPos();
+			do {
+				advanceCurrentPos();
+				if (state == State.STOPPED)
+					return;
 
-			// End reached
-			if (state == State.STOPPED)
-				return;
+			} while (!blockReader.getBounds()
+				.isVecInside(currentPos));
 
 			sendUpdate = true;
 			target = schematicAnchor.add(currentPos);
@@ -467,8 +470,9 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 			CompoundNBT data = null;
 			if (AllBlockTags.SAFE_NBT.matches(blockState)) {
 				TileEntity tile = blockReader.getTileEntity(target);
-				if (tile != null && !tile.onlyOpsCanSetNbt()) {
+				if (tile != null) {
 					data = tile.write(new CompoundNBT());
+					data = NBTProcessors.process(tile, data, true);
 				}
 			}
 			launchBlock(target, icon, blockState, data);
@@ -573,9 +577,12 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		if (hasCreativeCrate)
 			return true;
 
+		attachedInventories.removeIf(cap -> !cap.isPresent());
+
 		// Find and apply damage
 		if (usage == ItemUseType.DAMAGE) {
-			for (IItemHandler iItemHandler : attachedInventories) {
+			for (LazyOptional<IItemHandler> cap : attachedInventories) {
+				IItemHandler iItemHandler = cap.orElse(EmptyHandler.INSTANCE);
 				for (int slot = 0; slot < iItemHandler.getSlots(); slot++) {
 					ItemStack extractItem = iItemHandler.extractItem(slot, 1, true);
 					if (!ItemRequirement.validate(required, extractItem))
@@ -604,8 +611,8 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		boolean success = false;
 		if (usage == ItemUseType.CONSUME) {
 			int amountFound = 0;
-			for (IItemHandler iItemHandler : attachedInventories) {
-
+			for (LazyOptional<IItemHandler> cap : attachedInventories) {
+				IItemHandler iItemHandler = cap.orElse(EmptyHandler.INSTANCE);
 				amountFound += ItemHelper
 					.extract(iItemHandler, s -> ItemRequirement.validate(required, s), ExtractionCountMode.UPTO,
 						required.getCount(), true)
@@ -621,7 +628,8 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 
 		if (!simulate && success) {
 			int amountFound = 0;
-			for (IItemHandler iItemHandler : attachedInventories) {
+			for (LazyOptional<IItemHandler> cap : attachedInventories) {
+				IItemHandler iItemHandler = cap.orElse(EmptyHandler.INSTANCE);
 				amountFound += ItemHelper
 					.extract(iItemHandler, s -> ItemRequirement.validate(required, s), ExtractionCountMode.UPTO,
 						required.getCount(), false)
@@ -704,12 +712,14 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		if (world == null)
 			return false;
 		BlockState toReplace = world.getBlockState(pos);
-		boolean placingAir = state.getBlock().isAir(state, world, pos);
+		boolean placingAir = state.getBlock()
+			.isAir(state, world, pos);
 
 		BlockState toReplaceOther = null;
-		if (BlockHelper.hasBlockStateProperty(state, BlockStateProperties.BED_PART) && BlockHelper.hasBlockStateProperty(state, BlockStateProperties.HORIZONTAL_FACING) && state.get(BlockStateProperties.BED_PART) == BedPart.FOOT)
+		if (state.contains(BlockStateProperties.BED_PART) && state.contains(BlockStateProperties.HORIZONTAL_FACING)
+			&& state.get(BlockStateProperties.BED_PART) == BedPart.FOOT)
 			toReplaceOther = world.getBlockState(pos.offset(state.get(BlockStateProperties.HORIZONTAL_FACING)));
-		if (BlockHelper.hasBlockStateProperty(state, BlockStateProperties.DOUBLE_BLOCK_HALF)
+		if (state.contains(BlockStateProperties.DOUBLE_BLOCK_HALF)
 			&& state.get(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.LOWER)
 			toReplaceOther = world.getBlockState(pos.up());
 
@@ -720,11 +730,13 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 			return false;
 		if (toReplace == state)
 			return false;
-		if (toReplace.getBlockHardness(world, pos) == -1 || (toReplaceOther != null && toReplaceOther.getBlockHardness(world, pos) == -1))
+		if (toReplace.getBlockHardness(world, pos) == -1
+			|| (toReplaceOther != null && toReplaceOther.getBlockHardness(world, pos) == -1))
 			return false;
 		if (pos.withinDistance(getPos(), 2f))
 			return false;
-		if (!replaceTileEntities && (toReplace.hasTileEntity() || (toReplaceOther != null && toReplaceOther.hasTileEntity())))
+		if (!replaceTileEntities
+			&& (toReplace.hasTileEntity() || (toReplaceOther != null && toReplaceOther.hasTileEntity())))
 			return false;
 
 		if (shouldIgnoreBlockState(state))
@@ -735,10 +747,12 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		if (replaceMode == 2 && !placingAir)
 			return true;
 		if (replaceMode == 1
-			&& (state.isNormalCube(blockReader, pos.subtract(schematicAnchor)) || (!toReplace.isNormalCube(world, pos) && (toReplaceOther == null || !toReplaceOther.isNormalCube(world, pos))))
+			&& (state.isNormalCube(blockReader, pos.subtract(schematicAnchor)) || (!toReplace.isNormalCube(world, pos)
+				&& (toReplaceOther == null || !toReplaceOther.isNormalCube(world, pos))))
 			&& !placingAir)
 			return true;
-		if (replaceMode == 0 && !toReplace.isNormalCube(world, pos) && (toReplaceOther == null || !toReplaceOther.isNormalCube(world, pos)) && !placingAir)
+		if (replaceMode == 0 && !toReplace.isNormalCube(world, pos)
+			&& (toReplaceOther == null || !toReplaceOther.isNormalCube(world, pos)) && !placingAir)
 			return true;
 
 		return false;
@@ -748,7 +762,7 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		// Block doesnt have a mapping (Water, lava, etc)
 		if (state.getBlock() == Blocks.STRUCTURE_VOID)
 			return true;
-		
+
 		ItemRequirement requirement = ItemRequirement.of(state);
 		if (requirement.isEmpty())
 			return false;
@@ -756,10 +770,10 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 			return false;
 
 		// Block doesnt need to be placed twice (Doors, beds, double plants)
-		if (BlockHelper.hasBlockStateProperty(state, BlockStateProperties.DOUBLE_BLOCK_HALF)
+		if (state.contains(BlockStateProperties.DOUBLE_BLOCK_HALF)
 			&& state.get(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER)
 			return true;
-		if (BlockHelper.hasBlockStateProperty(state, BlockStateProperties.BED_PART) && state.get(BlockStateProperties.BED_PART) == BedPart.HEAD)
+		if (state.contains(BlockStateProperties.BED_PART) && state.get(BlockStateProperties.BED_PART) == BedPart.HEAD)
 			return true;
 		if (state.getBlock() instanceof PistonHeadBlock)
 			return true;
@@ -845,7 +859,8 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 	}
 
 	protected void launchBlock(BlockPos target, ItemStack stack, BlockState state, @Nullable CompoundNBT data) {
-		if (state.getBlock().isAir(state, world, target))
+		if (state.getBlock()
+			.isAir(state, world, target))
 			blocksPlaced++;
 		flyingBlocks.add(new LaunchedItem.ForBlockState(this.getPos(), target, stack, state, data));
 		playFiringSound();
@@ -913,7 +928,11 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 
 		}
 		checklist.gathered.clear();
-		for (IItemHandler inventory : attachedInventories) {
+		findInventories();
+		for (LazyOptional<IItemHandler> cap : attachedInventories) {
+			if (!cap.isPresent())
+				continue;
+			IItemHandler inventory = cap.orElse(EmptyHandler.INSTANCE);
 			for (int slot = 0; slot < inventory.getSlots(); slot++) {
 				ItemStack stackInSlot = inventory.getStackInSlot(slot);
 				if (inventory.extractItem(slot, 1, true)
@@ -934,4 +953,8 @@ public class SchematicannonTileEntity extends SmartTileEntity implements INamedC
 		findInventories();
 	}
 
+	@Override
+	public boolean shouldRenderAsTE() {
+		return true;
+	}
 }

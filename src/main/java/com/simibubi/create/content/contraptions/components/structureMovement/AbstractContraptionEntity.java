@@ -1,15 +1,6 @@
 package com.simibubi.create.content.contraptions.components.structureMovement;
 
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.UUID;
-
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.lang3.tuple.MutablePair;
-
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllMovementBehaviours;
 import com.simibubi.create.content.contraptions.components.actors.SeatEntity;
 import com.simibubi.create.content.contraptions.components.structureMovement.glue.SuperGlueEntity;
@@ -19,7 +10,6 @@ import com.simibubi.create.foundation.collision.Matrix3d;
 import com.simibubi.create.foundation.networking.AllPackets;
 import com.simibubi.create.foundation.utility.AngleHelper;
 import com.simibubi.create.foundation.utility.VecHelper;
-
 import net.minecraft.block.material.PushReaction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
@@ -47,6 +37,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.NetworkHooks;
 import net.minecraftforge.fml.network.PacketDistributor;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.tuple.MutablePair;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public abstract class AbstractContraptionEntity extends Entity implements IEntityAdditionalSpawnData {
 
@@ -57,7 +52,8 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 
 	protected Contraption contraption;
 	protected boolean initialized;
-	private boolean prevPosInvalid;
+	protected boolean prevPosInvalid;
+	private boolean ticking;
 
 	public AbstractContraptionEntity(EntityType<?> entityTypeIn, World worldIn) {
 		super(entityTypeIn, worldIn);
@@ -72,6 +68,10 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 		if (world.isRemote)
 			return;
 		contraption.onEntityCreated(this);
+	}
+	
+	public boolean supportsTerrainCollision() {
+		return contraption instanceof TranslatingContraption;
 	}
 
 	protected void contraptionInitialize() {
@@ -241,11 +241,13 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 		if (!world.isRemote)
 			contraption.stalled = false;
 
+		ticking = true;
 		for (MutablePair<BlockInfo, MovementContext> pair : contraption.getActors()) {
 			MovementContext context = pair.right;
 			BlockInfo blockInfo = pair.left;
 			MovementBehaviour actor = AllMovementBehaviours.of(blockInfo.state);
 
+			Vector3d oldMotion = context.motion;
 			Vector3d actorPosition = toGlobalVector(VecHelper.getCenterOf(blockInfo.pos)
 				.add(actor.getActiveAreaOffset(context)), 1);
 			BlockPos gridPosition = new BlockPos(actorPosition);
@@ -254,19 +256,29 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 
 			context.rotation = v -> applyRotation(v, 1);
 			context.position = actorPosition;
-
-			Vector3d oldMotion = context.motion;
 			if (!actor.isActive(context))
 				continue;
 			if (newPosVisited && !context.stall) {
 				actor.visitNewPosition(context, gridPosition);
+				if (!isAlive())
+					break;
 				context.firstMovement = false;
 			}
-			if (!oldMotion.equals(context.motion))
+			if (!oldMotion.equals(context.motion)) {
 				actor.onSpeedChanged(context, oldMotion, context.motion);
+				if (!isAlive())
+					break;
+			}
 			actor.tick(context);
+			if (!isAlive())
+				break;
 			contraption.stalled |= context.stall;
 		}
+		if (!isAlive()) {
+			contraption.stop(world);
+			return;
+		}
+		ticking = false;
 
 		for (Entity entity : getPassengers()) {
 			if (!(entity instanceof OrientedContraptionEntity))
@@ -440,8 +452,11 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 	@Override
 	public void remove(boolean keepData) {
 		if (!world.isRemote && !removed && contraption != null) {
-			contraption.stop(world);
+			if (!ticking)
+				contraption.stop(world);
 		}
+		if (contraption != null)
+			contraption.onEntityRemoved(this);
 		super.remove(keepData);
 	}
 
@@ -593,8 +608,11 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 		return false;
 	}
 
+	@OnlyIn(Dist.CLIENT)
+	public abstract void doLocalTransforms(float partialTicks, MatrixStack[] matrixStacks);
+
 	public static class ContraptionRotationState {
-		static final ContraptionRotationState NONE = new ContraptionRotationState();
+		public static final ContraptionRotationState NONE = new ContraptionRotationState();
 
 		float xRotation = 0;
 		float yRotation = 0;
@@ -625,5 +643,26 @@ public abstract class AbstractContraptionEntity extends Entity implements IEntit
 		}
 
 	}
+
+	//@Override //TODO find 1.16 replacement
+	//public void updateAquatics() {
+		/*
+		Override this with an empty method to reduce enormous calculation time when contraptions are in water
+		WARNING: THIS HAS A BUNCH OF SIDE EFFECTS!
+		- Fluids will not try to change contraption movement direction
+		- this.inWater and this.isInWater() will return unreliable data
+		- entities riding a contraption will not cause water splashes (seats are their own entity so this should be fine)
+		- fall distance is not reset when the contraption is in water
+		- this.eyesInWater and this.canSwim() will always be false
+		- swimming state will never be updated
+		 */
+	//	extinguish();
+	//}
+
+	@Override
+	public void setFire(int p_70015_1_) {
+		 // Contraptions no longer catch fire
+	}
+
 
 }

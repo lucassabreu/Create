@@ -18,11 +18,16 @@ import net.minecraftforge.items.CapabilityItemHandler;
 
 public abstract class SmartTileEntity extends SyncedTileEntity implements ITickableTileEntity {
 
-	private Map<BehaviourType<?>, TileEntityBehaviour> behaviours;
+	private final Map<BehaviourType<?>, TileEntityBehaviour> behaviours;
+	// Internally maintained to be identical to behaviorMap.values() in order to improve iteration performance.
+	private final List<TileEntityBehaviour> behaviourList;
 	private boolean initialized;
 	private boolean firstNbtRead;
 	private int lazyTickRate;
 	private int lazyTickCounter;
+
+	// Used for simulating this TE in a client-only setting
+	private boolean virtualMode;
 
 	public SmartTileEntity(TileEntityType<?> tileEntityTypeIn) {
 		super(tileEntityTypeIn);
@@ -34,6 +39,9 @@ public abstract class SmartTileEntity extends SyncedTileEntity implements ITicka
 		ArrayList<TileEntityBehaviour> list = new ArrayList<>();
 		addBehaviours(list);
 		list.forEach(b -> behaviours.put(b.getType(), b));
+
+		behaviourList = new ArrayList<>(list.size());
+		updateBehaviorList();
 	}
 
 	public abstract void addBehaviours(List<TileEntityBehaviour> behaviours);
@@ -56,13 +64,11 @@ public abstract class SmartTileEntity extends SyncedTileEntity implements ITicka
 			lazyTick();
 		}
 
-		behaviours.values()
-			.forEach(TileEntityBehaviour::tick);
+		behaviourList.forEach(TileEntityBehaviour::tick);
 	}
 
 	public void initialize() {
-		behaviours.values()
-			.forEach(TileEntityBehaviour::initialize);
+		behaviourList.forEach(TileEntityBehaviour::initialize);
 		lazyTick();
 	}
 
@@ -97,10 +103,11 @@ public abstract class SmartTileEntity extends SyncedTileEntity implements ITicka
 			ArrayList<TileEntityBehaviour> list = new ArrayList<>();
 			addBehavioursDeferred(list);
 			list.forEach(b -> behaviours.put(b.getType(), b));
+
+			updateBehaviorList();
 		}
 		super.fromTag(state, compound);
-		behaviours.values()
-			.forEach(tb -> tb.read(compound, clientPacket));
+		behaviourList.forEach(tb -> tb.read(compound, clientPacket));
 	}
 
 	/**
@@ -108,8 +115,7 @@ public abstract class SmartTileEntity extends SyncedTileEntity implements ITicka
 	 */
 	protected void write(CompoundNBT compound, boolean clientPacket) {
 		super.write(compound);
-		behaviours.values()
-			.forEach(tb -> tb.write(compound, clientPacket));
+		behaviourList.forEach(tb -> tb.write(compound, clientPacket));
 	}
 
 	@Override
@@ -128,34 +134,52 @@ public abstract class SmartTileEntity extends SyncedTileEntity implements ITicka
 	}
 
 	protected void forEachBehaviour(Consumer<TileEntityBehaviour> action) {
-		behaviours.values()
-			.forEach(action);
+		behaviourList.forEach(action);
 	}
 
 	protected void attachBehaviourLate(TileEntityBehaviour behaviour) {
 		behaviours.put(behaviour.getType(), behaviour);
 		behaviour.initialize();
+
+		updateBehaviorList();
 	}
 
 	protected void removeBehaviour(BehaviourType<?> type) {
 		TileEntityBehaviour remove = behaviours.remove(type);
-		if (remove != null)
+		if (remove != null) {
 			remove.remove();
+			updateBehaviorList();
+		}
+	}
+
+	// We don't trust the input to the API will be sane, so we
+	// update all the contents whenever something changes. It's
+	// simpler than trying to manipulate the list one element at
+	// a time.
+	private void updateBehaviorList() {
+		behaviourList.clear();
+		behaviourList.addAll(behaviours.values());
 	}
 
 	@SuppressWarnings("unchecked")
 	public <T extends TileEntityBehaviour> T getBehaviour(BehaviourType<T> type) {
-		if (behaviours.containsKey(type))
-			return (T) behaviours.get(type);
-		return null;
+		return (T) behaviours.get(type);
 	}
-	
+
 	protected boolean isItemHandlerCap(Capability<?> cap) {
 		return cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY;
 	}
-	
+
 	protected boolean isFluidHandlerCap(Capability<?> cap) {
 		return cap == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY;
+	}
+	
+	public void markVirtual() {
+		virtualMode = true;
+	}
+	
+	public boolean isVirtual() {
+		return virtualMode;
 	}
 
 }

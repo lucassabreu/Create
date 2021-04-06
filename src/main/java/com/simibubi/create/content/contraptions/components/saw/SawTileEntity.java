@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Predicate;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.AllTags;
 import com.simibubi.create.content.contraptions.components.actors.BlockBreakingKineticTileEntity;
@@ -22,16 +24,8 @@ import com.simibubi.create.foundation.utility.TreeCutter.Tree;
 import com.simibubi.create.foundation.utility.VecHelper;
 import com.simibubi.create.foundation.utility.recipe.RecipeConditions;
 import com.simibubi.create.foundation.utility.recipe.RecipeFinder;
-
-import net.minecraft.block.BambooBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.CactusBlock;
-import net.minecraft.block.ChorusPlantBlock;
-import net.minecraft.block.KelpBlock;
-import net.minecraft.block.KelpTopBlock;
-import net.minecraft.block.StemGrownBlock;
-import net.minecraft.block.SugarCaneBlock;
+import mcp.MethodsReturnNonnullByDefault;
+import net.minecraft.block.*;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
@@ -46,21 +40,28 @@ import net.minecraft.particles.ParticleTypes;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.Direction;
+import net.minecraft.util.LazyValue;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.registry.Registry;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
 public class SawTileEntity extends BlockBreakingKineticTileEntity {
 
 	private static final Object cuttingRecipesKey = new Object();
+	public static final LazyValue<IRecipeType<?>> woodcuttingRecipeType =
+		new LazyValue<>(() -> Registry.RECIPE_TYPE.getOrDefault(new ResourceLocation("druidcraft", "woodcutting")));
 
 	public ProcessingInventory inventory;
 	private int recipeIndex;
-	private LazyOptional<IItemHandler> invProvider = LazyOptional.empty();
+	private final LazyOptional<IItemHandler> invProvider;
 	private FilteringBehaviour filtering;
 
 	public SawTileEntity(TileEntityType<? extends SawTileEntity> type) {
@@ -115,7 +116,7 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 		if (inventory.remainingTime > 0)
 			spawnParticles(inventory.getStackInSlot(0));
 
-		if (world.isRemote)
+		if (world.isRemote && !isVirtual())
 			return;
 
 		if (inventory.remainingTime < 20 && !inventory.appliedRecipe) {
@@ -136,11 +137,15 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 			if (stack.isEmpty())
 				continue;
 			ItemStack tryExportingToBeltFunnel = getBehaviour(DirectBeltInputBehaviour.TYPE)
-				.tryExportingToBeltFunnel(stack, itemMovementFacing.getOpposite());
-			if (tryExportingToBeltFunnel.getCount() != stack.getCount()) {
-				inventory.setStackInSlot(slot, tryExportingToBeltFunnel);
-				notifyUpdate();
-				return;
+				.tryExportingToBeltFunnel(stack, itemMovementFacing.getOpposite(), false);
+			if (tryExportingToBeltFunnel != null) {
+				if (tryExportingToBeltFunnel.getCount() != stack.getCount()) {
+					inventory.setStackInSlot(slot, tryExportingToBeltFunnel);
+					notifyUpdate();
+					return;
+				}
+				if (!tryExportingToBeltFunnel.isEmpty())
+					return;
 			}
 		}
 
@@ -247,7 +252,7 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 			List<ItemStack> results = new LinkedList<ItemStack>();
 			if (recipe instanceof CuttingRecipe)
 				results = ((CuttingRecipe) recipe).rollResults();
-			else if (recipe instanceof StonecuttingRecipe)
+			else if (recipe instanceof StonecuttingRecipe || recipe.getType() == woodcuttingRecipeType.getValue())
 				results.add(recipe.getRecipeOutput()
 					.copy());
 
@@ -262,9 +267,19 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 	}
 
 	private List<? extends IRecipe<?>> getRecipes() {
-		Predicate<IRecipe<?>> types = AllConfigs.SERVER.recipes.allowStonecuttingOnSaw.get()
-			? RecipeConditions.isOfType(IRecipeType.STONECUTTING, AllRecipeTypes.CUTTING.getType())
-			: RecipeConditions.isOfType(AllRecipeTypes.CUTTING.getType());
+		/*
+		 * Predicate<IRecipe<?>> types =
+		 * AllConfigs.SERVER.recipes.allowStonecuttingOnSaw.get() ?
+		 * RecipeConditions.isOfType(IRecipeType.STONECUTTING,
+		 * AllRecipeTypes.CUTTING.getType()) :
+		 * RecipeConditions.isOfType(AllRecipeTypes.CUTTING.getType());
+		 * 
+		 */
+
+		Predicate<IRecipe<?>> types = RecipeConditions.isOfType(AllRecipeTypes.CUTTING.getType(),
+			AllConfigs.SERVER.recipes.allowStonecuttingOnSaw.get() ? IRecipeType.STONECUTTING : null,
+			AllConfigs.SERVER.recipes.allowWoodcuttingOnSaw.get() ? woodcuttingRecipeType.getValue() : null);
+
 		List<IRecipe<?>> startedSearch = RecipeFinder.get(cuttingRecipesKey, world, types);
 		return startedSearch.stream()
 			.filter(RecipeConditions.outputMatchesFilter(filtering))
@@ -293,7 +308,7 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 			return;
 		if (inventory.isEmpty())
 			return;
-		if (world.isRemote)
+		if (world.isRemote && !isVirtual())
 			return;
 
 		List<? extends IRecipe<?>> recipes = getRecipes();
@@ -387,6 +402,11 @@ public class SawTileEntity extends BlockBreakingKineticTileEntity {
 		if (block instanceof ChorusPlantBlock)
 			return true;
 		return false;
+	}
+
+	@Override
+	public boolean shouldRenderAsTE() {
+		return true;
 	}
 
 }

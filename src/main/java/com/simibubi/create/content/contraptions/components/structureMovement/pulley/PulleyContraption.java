@@ -1,6 +1,8 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.pulley;
 
-import com.simibubi.create.content.contraptions.components.structureMovement.AllContraptionTypes;
+import com.simibubi.create.content.contraptions.components.structureMovement.AssemblyException;
+import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionLighter;
+import com.simibubi.create.content.contraptions.components.structureMovement.ContraptionType;
 import com.simibubi.create.content.contraptions.components.structureMovement.TranslatingContraption;
 
 import net.minecraft.nbt.CompoundNBT;
@@ -12,8 +14,8 @@ public class PulleyContraption extends TranslatingContraption {
 	int initialOffset;
 
 	@Override
-	protected AllContraptionTypes getType() {
-		return AllContraptionTypes.PULLEY;
+	protected ContraptionType getType() {
+		return ContraptionType.PULLEY;
 	}
 
 	public PulleyContraption() {}
@@ -23,7 +25,7 @@ public class PulleyContraption extends TranslatingContraption {
 	}
 
 	@Override
-	public boolean assemble(World world, BlockPos pos) {
+	public boolean assemble(World world, BlockPos pos) throws AssemblyException {
 		if (!searchMovedStructure(world, pos, null))
 			return false;
 		startMoving(world);
@@ -53,4 +55,8 @@ public class PulleyContraption extends TranslatingContraption {
 		super.readNBT(world, nbt, spawnData);
 	}
 
+	@Override
+	public ContraptionLighter<?> makeLighter() {
+		return new PulleyLighter(this);
+	}
 }

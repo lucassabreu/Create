@@ -11,7 +11,7 @@ import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.simibubi.create.foundation.gui.widgets.AbstractSimiWidget;
 
-import mcp.MethodsReturnNonnullByDefault;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.gui.widget.Widget;
@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.Rectangle2d;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.client.util.InputMappings;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.item.ItemStack;
@@ -29,7 +30,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 @ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
 public abstract class AbstractSimiContainerScreen<T extends Container> extends ContainerScreen<T> {
 
 	protected List<Widget> widgets;
@@ -46,10 +46,13 @@ public abstract class AbstractSimiContainerScreen<T extends Container> extends C
 
 	@Override
 	protected void drawForeground(MatrixStack p_230451_1_, int p_230451_2_, int p_230451_3_) {
+		//no-op to prevent screen- and inventory-title from being rendered at incorrect location
+		//could also set this.titleX/Y and this.playerInventoryTitleX/Y to the proper values instead
 	}
 
 	@Override
 	public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+		partialTicks = Minecraft.getInstance().getRenderPartialTicks();
 		renderBackground(matrixStack);
 		renderWindow(matrixStack, mouseX, mouseY, partialTicks);
 		
@@ -85,7 +88,16 @@ public abstract class AbstractSimiContainerScreen<T extends Container> extends C
 			if (widget.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_))
 				return true;
 		}
-		return super.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_);
+		
+		if (super.keyPressed(code, p_keyPressed_2_, p_keyPressed_3_))
+			return true;
+
+		InputMappings.Input mouseKey = InputMappings.getInputByCode(code, p_keyPressed_2_);
+		if (this.client.gameSettings.keyBindInventory.isActiveAndMatches(mouseKey)) {
+			this.onClose();
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -94,8 +106,6 @@ public abstract class AbstractSimiContainerScreen<T extends Container> extends C
 			if (widget.charTyped(character, code))
 				return true;
 		}
-		if (character == 'e')
-			onClose();
 		return super.charTyped(character, code);
 	}
 

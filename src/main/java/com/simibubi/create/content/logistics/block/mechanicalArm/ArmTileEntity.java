@@ -1,10 +1,5 @@
 package com.simibubi.create.content.logistics.block.mechanicalArm;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import com.simibubi.create.content.contraptions.base.KineticTileEntity;
 import com.simibubi.create.content.logistics.block.mechanicalArm.ArmInteractionPoint.Jukebox;
 import com.simibubi.create.content.logistics.block.mechanicalArm.ArmInteractionPoint.Mode;
@@ -21,7 +16,6 @@ import com.simibubi.create.foundation.utility.AngleHelper;
 import com.simibubi.create.foundation.utility.Lang;
 import com.simibubi.create.foundation.utility.NBTHelper;
 import com.simibubi.create.foundation.utility.VecHelper;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.block.JukeboxBlock;
 import net.minecraft.item.ItemStack;
@@ -37,6 +31,10 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.Constants.NBT;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ArmTileEntity extends KineticTileEntity {
 
@@ -67,7 +65,7 @@ public class ArmTileEntity extends KineticTileEntity {
 	protected int lastOutputIndex = -1;
 	protected boolean redstoneLocked;
 
-	enum Phase {
+	public enum Phase {
 		SEARCH_INPUTS, MOVE_TO_INPUT, SEARCH_OUTPUTS, MOVE_TO_OUTPUT, DANCING
 	}
 
@@ -78,12 +76,16 @@ public class ArmTileEntity extends KineticTileEntity {
 		interactionPointTag = new ListNBT();
 		heldItem = ItemStack.EMPTY;
 		phase = Phase.SEARCH_INPUTS;
-		baseAngle = new InterpolatedAngle();
-		lowerArmAngle = new InterpolatedAngle();
-		upperArmAngle = new InterpolatedAngle();
-		headAngle = new InterpolatedAngle();
-		clawAngle = new InterpolatedAngle();
 		previousTarget = ArmAngleTarget.NO_TARGET;
+		baseAngle = new InterpolatedAngle();
+		baseAngle.init(previousTarget.baseAngle);
+		lowerArmAngle = new InterpolatedAngle();
+		lowerArmAngle.init(previousTarget.lowerArmAngle);
+		upperArmAngle = new InterpolatedAngle();
+		upperArmAngle.init(previousTarget.upperArmAngle);
+		headAngle = new InterpolatedAngle();
+		headAngle.init(previousTarget.headAngle);
+		clawAngle = new InterpolatedAngle();
 		previousBaseAngle = previousTarget.baseAngle;
 		updateInteractionPoints = true;
 		redstoneLocked = false;
@@ -103,16 +105,28 @@ public class ArmTileEntity extends KineticTileEntity {
 	public void tick() {
 		super.tick();
 		initInteractionPoints();
-		tickMovementProgress();
+		boolean targetReached = tickMovementProgress();
 
+		if (chasedPointProgress < 1) {
+			if (phase == Phase.MOVE_TO_INPUT) {
+				ArmInteractionPoint point = getTargetedInteractionPoint();
+				if (point != null)
+					point.keepAlive(world);
+			}
+			return;
+		}
 		if (world.isRemote)
 			return;
-		if (chasedPointProgress < 1)
-			return;
+		
 		if (phase == Phase.MOVE_TO_INPUT)
 			collectItem();
-		if (phase == Phase.MOVE_TO_OUTPUT)
+		else if (phase == Phase.MOVE_TO_OUTPUT)
 			depositItem();
+		else if (phase == Phase.SEARCH_INPUTS || phase == Phase.DANCING)
+			searchForItem();
+		
+		if (targetReached)
+			lazyTick();
 	}
 
 	@Override
@@ -123,10 +137,8 @@ public class ArmTileEntity extends KineticTileEntity {
 			return;
 		if (chasedPointProgress < .5f)
 			return;
-		if (phase == Phase.SEARCH_INPUTS || phase == Phase.DANCING) {
+		if (phase == Phase.SEARCH_INPUTS || phase == Phase.DANCING) 
 			checkForMusic();
-			searchForItem();
-		}
 		if (phase == Phase.SEARCH_OUTPUTS)
 			searchForDestination();
 	}
@@ -142,8 +154,8 @@ public class ArmTileEntity extends KineticTileEntity {
 
 	@Override
 	@OnlyIn(Dist.CLIENT)
-	public AxisAlignedBB getRenderBoundingBox() {
-		return super.getRenderBoundingBox().grow(3);
+	public AxisAlignedBB makeRenderBoundingBox() {
+		return super.makeRenderBoundingBox().grow(3);
 	}
 
 	private boolean checkForMusicAmong(List<ArmInteractionPoint> list) {
@@ -157,12 +169,13 @@ public class ArmTileEntity extends KineticTileEntity {
 		return false;
 	}
 
-	private void tickMovementProgress() {
+	private boolean tickMovementProgress() {
+		boolean targetReachedPreviously = chasedPointProgress >= 1; 
 		chasedPointProgress += Math.min(256, Math.abs(getSpeed())) / 1024f;
 		if (chasedPointProgress > 1)
 			chasedPointProgress = 1;
 		if (!world.isRemote)
-			return;
+			return !targetReachedPreviously && chasedPointProgress >= 1;
 
 		ArmInteractionPoint targetedInteractionPoint = getTargetedInteractionPoint();
 		ArmAngleTarget previousTarget = this.previousTarget;
@@ -183,6 +196,7 @@ public class ArmTileEntity extends KineticTileEntity {
 		upperArmAngle.set(MathHelper.lerp(progress, previousTarget.upperArmAngle, target.upperArmAngle));
 
 		headAngle.set(AngleHelper.angleLerp(progress, previousTarget.headAngle % 360, target.headAngle % 360));
+		return false;
 	}
 
 	protected boolean isOnCeiling() {
@@ -469,6 +483,11 @@ public class ArmTileEntity extends KineticTileEntity {
 		return true;
 	}
 
+	@Override
+	public boolean shouldRenderAsTE() {
+		return true;
+	}
+
 	private class SelectionModeValueBox extends CenteredSideValueBoxTransform {
 
 		public SelectionModeValueBox() {
@@ -478,7 +497,7 @@ public class ArmTileEntity extends KineticTileEntity {
 		@Override
 		protected Vector3d getLocalOffset(BlockState state) {
 			int yPos = state.get(ArmBlock.CEILING) ? 16 - 3 : 3;
-			Vector3d location = VecHelper.voxelSpace(8, yPos, 14.5);
+			Vector3d location = VecHelper.voxelSpace(8, yPos, 15.95);
 			location = VecHelper.rotateCentered(location, AngleHelper.horizontalAngle(getSide()), Direction.Axis.Y);
 			return location;
 		}

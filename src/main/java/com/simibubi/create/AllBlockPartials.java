@@ -7,15 +7,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
+import com.simibubi.create.content.contraptions.base.KineticRenderMaterials;
+import com.simibubi.create.content.contraptions.base.RotatingData;
 import com.simibubi.create.content.contraptions.fluids.FluidTransportBehaviour.AttachmentTypes;
 import com.simibubi.create.content.contraptions.processing.burner.BlazeBurnerBlock.HeatLevel;
+import com.simibubi.create.content.contraptions.relays.belt.BeltData;
+import com.simibubi.create.foundation.render.SuperByteBuffer;
+import com.simibubi.create.foundation.render.backend.MaterialTypes;
+import com.simibubi.create.foundation.render.backend.instancing.InstancedModel;
+import com.simibubi.create.foundation.render.backend.instancing.InstancedTileRenderer;
+import com.simibubi.create.foundation.render.backend.core.ModelData;
 import com.simibubi.create.foundation.utility.AngleHelper;
 import com.simibubi.create.foundation.utility.Iterate;
 import com.simibubi.create.foundation.utility.Lang;
 import com.simibubi.create.foundation.utility.MatrixStacker;
-import com.simibubi.create.foundation.utility.SuperByteBuffer;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.client.renderer.model.IBakedModel;
@@ -58,7 +66,8 @@ public class AllBlockPartials {
 		HARVESTER_BLADE = get("mechanical_harvester/blade"), DEPLOYER_POLE = get("deployer/pole"),
 		DEPLOYER_HAND_POINTING = get("deployer/hand_pointing"), DEPLOYER_HAND_PUNCHING = get("deployer/hand_punching"),
 		DEPLOYER_HAND_HOLDING = get("deployer/hand_holding"), ANALOG_LEVER_HANDLE = get("analog_lever/handle"),
-		ANALOG_LEVER_INDICATOR = get("analog_lever/indicator"), BELT_FUNNEL_FLAP = get("belt_funnel/flap"),
+		ANALOG_LEVER_INDICATOR = get("analog_lever/indicator"), FUNNEL_FLAP = get("funnel/flap"), 
+		BELT_FUNNEL_FLAP = get("belt_funnel/flap"),
 		BELT_TUNNEL_FLAP = get("belt_tunnel/flap"), FLEXPEATER_INDICATOR = get("diodes/indicator"),
 		FLYWHEEL = get("flywheel/wheel"), FLYWHEEL_UPPER_ROTATING = get("flywheel/upper_rotating_connector"),
 
@@ -69,6 +78,8 @@ public class AllBlockPartials {
 		CUCKOO_HOUR_HAND = get("cuckoo_clock/hour_hand"), CUCKOO_LEFT_DOOR = get("cuckoo_clock/left_door"),
 		CUCKOO_RIGHT_DOOR = get("cuckoo_clock/right_door"), CUCKOO_PIG = get("cuckoo_clock/pig"),
 		CUCKOO_CREEPER = get("cuckoo_clock/creeper"), 
+		
+		GANTRY_COGS = get("gantry_carriage/wheels"),
 		
 		ROPE_COIL = get("rope_pulley/rope_coil"),
 		ROPE_HALF = get("rope_pulley/rope_half"), 
@@ -84,6 +95,8 @@ public class AllBlockPartials {
 
 		SYMMETRY_PLANE = get("symmetry_effect/plane"), SYMMETRY_CROSSPLANE = get("symmetry_effect/crossplane"),
 		SYMMETRY_TRIPLEPLANE = get("symmetry_effect/tripleplane"),
+		
+		STICKER_HEAD = get("sticker/head"),
 
 		PORTABLE_STORAGE_INTERFACE_MIDDLE = get("portable_storage_interface/block_middle"),
 		PORTABLE_STORAGE_INTERFACE_MIDDLE_POWERED = get("portable_storage_interface/block_middle_powered"),
@@ -106,6 +119,12 @@ public class AllBlockPartials {
 
 		SPOUT_TOP = get("spout/top"), SPOUT_MIDDLE = get("spout/middle"), SPOUT_BOTTOM = get("spout/bottom"),
 
+		SPEED_CONTROLLER_BRACKET = get("rotation_speed_controller/bracket"),
+		
+		GOGGLES = get("goggles"),
+		
+		EJECTOR_TOP = get("weighted_ejector/top"),
+		
 		COUPLING_ATTACHMENT = getEntity("minecart_coupling/attachment"),
 		COUPLING_RING = getEntity("minecart_coupling/ring"),
 		COUPLING_CONNECTOR = getEntity("minecart_coupling/connector")
@@ -216,6 +235,50 @@ public class AllBlockPartials {
 			.rotateX(facing == Direction.UP ? 0 : facing == Direction.DOWN ? 180 : 90)
 			.unCentre();
 		return CreateClient.bufferCache.renderDirectionalPartial(this, referenceState, facing, ms);
+	}
+
+	public InstancedModel<RotatingData> renderOnRotating(InstancedTileRenderer<?> ctx, BlockState referenceState) {
+		return ctx.getMaterial(KineticRenderMaterials.ROTATING).getModel(this, referenceState);
+	}
+
+	public InstancedModel<BeltData> renderOnBelt(InstancedTileRenderer<?> ctx, BlockState referenceState) {
+		return ctx.getMaterial(KineticRenderMaterials.BELTS).getModel(this, referenceState);
+	}
+
+	public InstancedModel<RotatingData> renderOnDirectionalSouthRotating(InstancedTileRenderer<?> dispatcher, BlockState referenceState) {
+		Direction facing = referenceState.get(FACING);
+		return renderOnDirectionalSouthRotating(dispatcher, referenceState, facing);
+	}
+
+	public InstancedModel<RotatingData> renderOnDirectionalSouthRotating(InstancedTileRenderer<?> dispatcher, BlockState referenceState, Direction facing) {
+		Supplier<MatrixStack> ms = () -> {
+			MatrixStack stack = new MatrixStack();
+			MatrixStacker.of(stack)
+						 .centre()
+						 .rotateY(AngleHelper.horizontalAngle(facing))
+						 .rotateX(AngleHelper.verticalAngle(facing))
+						 .unCentre();
+			return stack;
+		};
+		return dispatcher.getMaterial(KineticRenderMaterials.ROTATING).getModel(this, referenceState, facing, ms);
+	}
+
+	public InstancedModel<ModelData> renderOnHorizontalModel(InstancedTileRenderer<?> dispatcher, BlockState referenceState) {
+		Direction facing = referenceState.get(HORIZONTAL_FACING);
+		return renderOnDirectionalSouthModel(dispatcher, referenceState, facing);
+	}
+
+	public InstancedModel<ModelData> renderOnDirectionalSouthModel(InstancedTileRenderer<?> dispatcher, BlockState referenceState, Direction facing) {
+		Supplier<MatrixStack> ms = () -> {
+			MatrixStack stack = new MatrixStack();
+			MatrixStacker.of(stack)
+						 .centre()
+						 .rotateY(AngleHelper.horizontalAngle(facing))
+						 .rotateX(AngleHelper.verticalAngle(facing))
+						 .unCentre();
+			return stack;
+		};
+		return dispatcher.getMaterial(MaterialTypes.TRANSFORMED).getModel(this, referenceState, facing, ms);
 	}
 
 }

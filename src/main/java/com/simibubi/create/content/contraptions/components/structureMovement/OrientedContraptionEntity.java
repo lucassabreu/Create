@@ -1,12 +1,6 @@
 package com.simibubi.create.content.contraptions.components.structureMovement;
 
-import static com.simibubi.create.foundation.utility.AngleHelper.angleLerp;
-
-import java.util.Optional;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
+import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.AllEntityTypes;
 import com.simibubi.create.content.contraptions.components.structureMovement.bearing.StabilizedContraption;
 import com.simibubi.create.content.contraptions.components.structureMovement.mounted.CartAssemblerTileEntity.CartMovementMode;
@@ -14,11 +8,7 @@ import com.simibubi.create.content.contraptions.components.structureMovement.mou
 import com.simibubi.create.content.contraptions.components.structureMovement.train.capability.CapabilityMinecartController;
 import com.simibubi.create.content.contraptions.components.structureMovement.train.capability.MinecartController;
 import com.simibubi.create.foundation.item.ItemHelper;
-import com.simibubi.create.foundation.utility.AngleHelper;
-import com.simibubi.create.foundation.utility.Couple;
-import com.simibubi.create.foundation.utility.NBTHelper;
-import com.simibubi.create.foundation.utility.VecHelper;
-
+import com.simibubi.create.foundation.utility.*;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -39,7 +29,15 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.util.LazyOptional;
+
+import javax.annotation.Nullable;
+import java.util.Optional;
+import java.util.UUID;
+
+import static com.simibubi.create.foundation.utility.AngleHelper.angleLerp;
 
 /**
  * Ex: Minecarts, Couplings <br>
@@ -59,6 +57,7 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 	protected boolean forceAngle;
 	private boolean isSerializingFurnaceCart;
 	private boolean attachedExtraInventories;
+	private boolean manuallyPlaced;
 
 	public float prevYaw;
 	public float yaw;
@@ -86,6 +85,14 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 		entity.setContraption(contraption);
 		initialOrientation.ifPresent(entity::setInitialOrientation);
 		entity.startAtInitialYaw();
+		return entity;
+	}
+
+	public static OrientedContraptionEntity createAtYaw(World world, Contraption contraption,
+		Optional<Direction> initialOrientation, float initialYaw) {
+		OrientedContraptionEntity entity = create(world, contraption, initialOrientation);
+		entity.startAtYaw(initialYaw);
+		entity.manuallyPlaced = true;
 		return entity;
 	}
 
@@ -148,6 +155,11 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 
 		if (compound.contains("InitialOrientation"))
 			setInitialOrientation(NBTHelper.readEnum(compound, "InitialOrientation", Direction.class));
+
+		yaw = compound.getFloat("Yaw");
+		pitch = compound.getFloat("Pitch");
+		manuallyPlaced = compound.getBoolean("Placed");
+
 		if (compound.contains("ForceYaw"))
 			startAtYaw(compound.getFloat("ForceYaw"));
 
@@ -158,9 +170,6 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 				targetYaw = prevYaw = yaw += yawFromVector(motionBeforeStall);
 			setMotion(Vector3d.ZERO);
 		}
-
-		yaw = compound.getFloat("Yaw");
-		pitch = compound.getFloat("Pitch");
 
 		setCouplingId(compound.contains("OnCoupling") ? compound.getUniqueId("OnCoupling") : null);
 	}
@@ -182,6 +191,7 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 			forceAngle = false;
 		}
 
+		compound.putBoolean("Placed", manuallyPlaced);
 		compound.putFloat("Yaw", yaw);
 		compound.putFloat("Pitch", pitch);
 
@@ -192,7 +202,7 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 	@Override
 	public void notifyDataManagerChange(DataParameter<?> key) {
 		super.notifyDataManagerChange(key);
-		if (key == INITIAL_ORIENTATION && isInitialOrientationPresent())
+		if (key == INITIAL_ORIENTATION && isInitialOrientationPresent() && !manuallyPlaced)
 			startAtInitialYaw();
 	}
 
@@ -351,14 +361,16 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 
 		boolean rotating = false;
 		Vector3d movementVector = riding.getMotion();
-
+		Vector3d locationDiff = riding.getPositionVec()
+			.subtract(riding.prevPosX, riding.prevPosY, riding.prevPosZ);
 		if (!(riding instanceof AbstractMinecartEntity))
-			movementVector = getPositionVec().subtract(prevPosX, prevPosY, prevPosZ);
+			movementVector = locationDiff;
 		Vector3d motion = movementVector.normalize();
 
 		if (!isInitialOrientationPresent() && !world.isRemote) {
-			if (motion.length() > 0) {
-				Direction facingFromVector = Direction.getFacingFromVector(motion.x, motion.y, motion.z);
+			if (locationDiff.length() > 0) {
+				Direction facingFromVector =
+					Direction.getFacingFromVector(locationDiff.x, locationDiff.y, locationDiff.z);
 				if (initialYawOffset != -1)
 					facingFromVector = Direction.fromAngle(facingFromVector.getHorizontalAngle() - initialYawOffset);
 				if (facingFromVector.getAxis()
@@ -492,4 +504,89 @@ public class OrientedContraptionEntity extends AbstractContraptionEntity {
 		yaw = angle;
 	}
 
+	@Override
+	@OnlyIn(Dist.CLIENT)
+	public void doLocalTransforms(float partialTicks, MatrixStack[] matrixStacks) {
+		float angleInitialYaw = getInitialYaw();
+		float angleYaw = getYaw(partialTicks);
+		float anglePitch = getPitch(partialTicks);
+
+		for (MatrixStack stack : matrixStacks)
+			stack.translate(-.5f, 0, -.5f);
+
+		Entity ridingEntity = getRidingEntity();
+		if (ridingEntity instanceof AbstractMinecartEntity)
+			repositionOnCart(partialTicks, matrixStacks, ridingEntity);
+		else if (ridingEntity instanceof AbstractContraptionEntity) {
+			if (ridingEntity.getRidingEntity() instanceof AbstractMinecartEntity)
+				repositionOnCart(partialTicks, matrixStacks, ridingEntity.getRidingEntity());
+			else
+				repositionOnContraption(partialTicks, matrixStacks, ridingEntity);
+		}
+
+		for (MatrixStack stack : matrixStacks)
+			MatrixStacker.of(stack)
+				.nudge(getEntityId())
+				.centre()
+				.rotateY(angleYaw)
+				.rotateZ(anglePitch)
+				.rotateY(angleInitialYaw)
+				.unCentre();
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private void repositionOnContraption(float partialTicks, MatrixStack[] matrixStacks, Entity ridingEntity) {
+		Vector3d pos = getContraptionOffset(partialTicks, ridingEntity);
+		for (MatrixStack stack : matrixStacks)
+			stack.translate(pos.x, pos.y, pos.z);
+	}
+
+	// Minecarts do not always render at their exact location, so the contraption
+	// has to adjust aswell
+	@OnlyIn(Dist.CLIENT)
+	private void repositionOnCart(float partialTicks, MatrixStack[] matrixStacks, Entity ridingEntity) {
+		Vector3d cartPos = getCartOffset(partialTicks, ridingEntity);
+
+		if (cartPos == Vector3d.ZERO) return;
+
+		for (MatrixStack stack : matrixStacks)
+			stack.translate(cartPos.x, cartPos.y, cartPos.z);
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private Vector3d getContraptionOffset(float partialTicks, Entity ridingEntity) {
+		AbstractContraptionEntity parent = (AbstractContraptionEntity) ridingEntity;
+		Vector3d passengerPosition = parent.getPassengerPosition(this, partialTicks);
+		double x = passengerPosition.x - MathHelper.lerp(partialTicks, this.lastTickPosX, this.getX());
+		double y = passengerPosition.y - MathHelper.lerp(partialTicks, this.lastTickPosY, this.getY());
+		double z = passengerPosition.z - MathHelper.lerp(partialTicks, this.lastTickPosZ, this.getZ());
+
+		return new Vector3d(x, y, z);
+	}
+
+	@OnlyIn(Dist.CLIENT)
+	private Vector3d getCartOffset(float partialTicks, Entity ridingEntity) {
+		AbstractMinecartEntity cart = (AbstractMinecartEntity) ridingEntity;
+		double cartX = MathHelper.lerp(partialTicks, cart.lastTickPosX, cart.getX());
+		double cartY = MathHelper.lerp(partialTicks, cart.lastTickPosY, cart.getY());
+		double cartZ = MathHelper.lerp(partialTicks, cart.lastTickPosZ, cart.getZ());
+		Vector3d cartPos = cart.getPos(cartX, cartY, cartZ);
+
+		if (cartPos != null) {
+			Vector3d cartPosFront = cart.getPosOffset(cartX, cartY, cartZ, (double) 0.3F);
+			Vector3d cartPosBack = cart.getPosOffset(cartX, cartY, cartZ, (double) -0.3F);
+			if (cartPosFront == null)
+				cartPosFront = cartPos;
+			if (cartPosBack == null)
+				cartPosBack = cartPos;
+
+			cartX = cartPos.x - cartX;
+			cartY = (cartPosFront.y + cartPosBack.y) / 2.0D - cartY;
+			cartZ = cartPos.z - cartZ;
+
+			return new Vector3d(cartX, cartY, cartZ);
+		}
+
+		return Vector3d.ZERO;
+	}
 }

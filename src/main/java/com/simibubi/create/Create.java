@@ -2,6 +2,8 @@ package com.simibubi.create;
 
 import java.util.Random;
 
+import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.placement.Placement;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,7 +15,9 @@ import com.simibubi.create.content.contraptions.components.structureMovement.tra
 import com.simibubi.create.content.logistics.RedstoneLinkNetworkHandler;
 import com.simibubi.create.content.palettes.AllPaletteBlocks;
 import com.simibubi.create.content.palettes.PalettesItemGroup;
+import com.simibubi.create.content.schematics.SchematicProcessor;
 import com.simibubi.create.content.schematics.ServerSchematicLoader;
+import com.simibubi.create.content.schematics.filtering.SchematicInstances;
 import com.simibubi.create.foundation.advancement.AllAdvancements;
 import com.simibubi.create.foundation.advancement.AllTriggers;
 import com.simibubi.create.foundation.command.ChunkUtil;
@@ -51,7 +55,7 @@ public class Create {
 
 	public static final String ID = "create";
 	public static final String NAME = "Create";
-	public static final String VERSION = "0.3";
+	public static final String VERSION = "0.3.1a";
 
 	public static Logger logger = LogManager.getLogger();
 	public static ItemGroup baseCreativeTab = new CreateItemGroup();
@@ -82,9 +86,12 @@ public class Create {
 		AllEntityTypes.register();
 		AllTileEntities.register();
 		AllMovementBehaviours.register();
+		AllWorldFeatures.register();
 
 		modEventBus.addListener(Create::init);
 		MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, Create::onBiomeLoad);
+		modEventBus.addGenericListener(Feature.class, AllWorldFeatures::registerOreFeatures);
+		modEventBus.addGenericListener(Placement.class, AllWorldFeatures::registerDecoratorFeatures);
 		modEventBus.addGenericListener(IRecipeSerializer.class, AllRecipeTypes::register);
 		modEventBus.addGenericListener(ContainerType.class, AllContainerTypes::register);
 		modEventBus.addGenericListener(ParticleType.class, AllParticleTypes::register);
@@ -96,11 +103,12 @@ public class Create {
 		AllConfigs.register();
 		random = new Random();
 
-		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> CreateClient.addClientListeners(modEventBus));
+		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> CreateClient.addClientListeners(modEventBus));
 	}
 
 	public static void init(final FMLCommonSetupEvent event) {
 		CapabilityMinecartController.register();
+		SchematicInstances.register();
 		schematicReceiver = new ServerSchematicLoader();
 		redstoneLinkNetworkHandler = new RedstoneLinkNetworkHandler();
 		torquePropagator = new TorquePropagator();
@@ -112,6 +120,11 @@ public class Create {
 
 		AllPackets.registerPackets();
 		AllTriggers.register();
+		
+		event.enqueueWork(() -> {
+			SchematicProcessor.register();
+			AllWorldFeatures.registerFeatures();
+		});
 	}
 	
 	public static void onBiomeLoad(BiomeLoadingEvent event) {

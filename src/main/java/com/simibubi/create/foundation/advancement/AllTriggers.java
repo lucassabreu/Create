@@ -1,23 +1,29 @@
 package com.simibubi.create.foundation.advancement;
 
+import com.simibubi.create.content.logistics.InWorldProcessing;
+import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.block.Block;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.IWorld;
+import net.minecraftforge.registries.ForgeRegistries;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Predicate;
 
-import net.minecraft.advancements.CriteriaTriggers;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
-
 public class AllTriggers {
 
-	private static List<CriterionTriggerBase<?>> triggers = new LinkedList<>();
+	private static final List<CriterionTriggerBase<?>> triggers = new LinkedList<>();
 
-	public static KineticBlockTrigger KINETIC_BLOCK = add(new KineticBlockTrigger("kinetic_block"));
+	public static final StringSerializableTrigger<Fluid> INFINITE_FLUID = add(new RegistryTrigger<>("infinite_fluid", ForgeRegistries.FLUIDS));
+	public static final StringSerializableTrigger<Block> BRACKET_APPLY_TRIGGER = add(new RegistryTrigger<>("bracket_apply", ForgeRegistries.BLOCKS));
+	public static final StringSerializableTrigger<InWorldProcessing.Type> FAN_PROCESSING = add(new EnumTrigger<>("fan_processing", InWorldProcessing.Type.class));
 
-	public static SimpleTrigger 
+	public static final SimpleTrigger
 			ROTATION = simple("rotation"), 
 			OVERSTRESSED = simple("overstressed"),
 			SHIFTING_GEARS = simple("shifting_gears"), 
@@ -27,7 +33,6 @@ public class AllTriggers {
 			LAVA_WHEEL = simple("lava_wheel"), 
 			CHOCOLATE_WHEEL = simple("chocolate_wheel"), 
 			DEPLOYER_BOOP = simple("deployer"),
-			ABSORBED_LIGHT = simple("light_absorbed"), 
 			SPEED_READ = simple("speed_read"), 
 			BASIN_THROW = simple("basin"),
 			PRESS_COMPACT = simple("compact"),
@@ -37,9 +42,6 @@ public class AllTriggers {
 			MECHANICAL_ARM = simple("mechanical_arm"),
 			MUSICAL_ARM = simple("musical_arm"),
 			CUCKOO = simple("cuckoo"),
-			BRACKET_SHAFT = simple("bracket_shaft"),
-			BRACKET_COG = simple("bracket_cog"),
-			BRACKET_PIPE = simple("bracket_pipe"),
 			CASING_SHAFT = simple("casing_shaft"),
 			CASING_BELT = simple("casing_belt"),
 			CASING_PIPE = simple("casing_pipe"),
@@ -48,10 +50,6 @@ public class AllTriggers {
 			PLACE_TUNNEL = simple("place_tunnel"),
 			CONNECT_TUNNEL = simple("connect_tunnel"),
 			UPWARD_CHUTE = simple("upward_chute"),
-			FAN = simple("fan"),
-			FAN_LAVA = simple("fan_lava"),
-			FAN_SMOKE = simple("fan_smoke"),
-			FAN_WATER = simple("fan_water"),
 			BELT_FUNNEL = simple("belt_funnel"),
 			BELT_FUNNEL_KISS = simple("belt_funnel_kiss"),
 			CLOCKWORK_BEARING = simple("clockwork_bearing"),
@@ -67,9 +65,6 @@ public class AllTriggers {
 			PIPE_COLLISION = simple("pipe_collision"),
 			PIPE_SPILL = simple("pipe_spill"),
 			HOSE_PULLEY = simple("hose_pulley"),
-			INFINITE_WATER = simple("infinite_water"),
-			INFINITE_LAVA = simple("infinite_lava"),
-			INFINITE_CHOCOLATE = simple("infinite_chocolate"),
 			MIXER_MIX = simple("mixer");
 
 	private static SimpleTrigger simple(String id) {
@@ -105,9 +100,6 @@ public class AllTriggers {
 	}
 
 	public static List<ServerPlayerEntity> getPlayersInRange(IWorld world, BlockPos pos, int range) {
-		List<ServerPlayerEntity> players =
-			world.getEntitiesWithinAABB(ServerPlayerEntity.class, new AxisAlignedBB(pos).grow(range));
-		return players;
+		return world.getEntitiesWithinAABB(ServerPlayerEntity.class, new AxisAlignedBB(pos).grow(range));
 	}
-
 }

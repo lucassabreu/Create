@@ -2,15 +2,13 @@ package com.simibubi.create.foundation.gui;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.simibubi.create.Create;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-public enum AllGuiTextures {
+public enum AllGuiTextures implements IScreenRenderable {
 
 	// Inventories
 	PLAYER_INVENTORY("player_inventory.png", 176, 108),
@@ -52,9 +50,10 @@ public enum AllGuiTextures {
 
 	SEQUENCER("sequencer.png", 173, 159),
 	SEQUENCER_INSTRUCTION("sequencer.png", 0, 14, 162, 22),
-	SEQUENCER_WAIT("sequencer.png", 0, 58, 162, 22),
+	SEQUENCER_DELAY("sequencer.png", 0, 58, 162, 22),
 	SEQUENCER_END("sequencer.png", 0, 80, 162, 22),
 	SEQUENCER_EMPTY("sequencer.png", 0, 102, 162, 22),
+	SEQUENCER_AWAIT("sequencer.png", 0, 160, 162, 22),
 
 	// JEI
 	JEI_SLOT("jei/widgets.png", 18, 18),
@@ -79,6 +78,12 @@ public enum AllGuiTextures {
 	INDICATOR_GREEN("widgets.png", 36, 18, 18, 6),
 	INDICATOR_YELLOW("widgets.png", 54, 18, 18, 6),
 	INDICATOR_RED("widgets.png", 72, 18, 18, 6),
+
+	SPEECH_TOOLTIP("widgets.png", 0, 24, 8, 8),
+	SPEECH_TOOLTIP_HIGHLIGHT("widgets.png", 8, 24, 8, 8),
+
+	// PlacementIndicator
+	PLACEMENT_INDICATOR_SHEET("placement_indicator.png", 0, 0, 16, 256);
 
 	;
 
@@ -111,16 +116,10 @@ public enum AllGuiTextures {
 			.bindTexture(location);
 	}
 
+	@Override
 	@OnlyIn(Dist.CLIENT)
-	public void draw(MatrixStack matrixStack, AbstractGui screen, int x, int y) {
+	public void draw(MatrixStack ms, AbstractGui screen, int x, int y) {
 		bind();
-		screen.drawTexture(matrixStack, x, y, startX, startY, width, height);
+		screen.drawTexture(ms, x, y, startX, startY, width, height);
 	}
-
-	@OnlyIn(Dist.CLIENT)
-	public void draw(MatrixStack matrixStack, int x, int y) {
-		draw(matrixStack, new Screen(null) {
-		}, x, y);
-	}
-
 }

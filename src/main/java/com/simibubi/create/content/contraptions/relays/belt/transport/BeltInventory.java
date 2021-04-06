@@ -1,13 +1,5 @@
 package com.simibubi.create.content.contraptions.relays.belt.transport;
 
-import static com.simibubi.create.content.contraptions.relays.belt.transport.BeltTunnelInteractionHandler.flapTunnel;
-
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.function.Function;
-
 import com.simibubi.create.content.contraptions.relays.belt.BeltBlock;
 import com.simibubi.create.content.contraptions.relays.belt.BeltHelper;
 import com.simibubi.create.content.contraptions.relays.belt.BeltSlope;
@@ -20,7 +12,6 @@ import com.simibubi.create.foundation.tileEntity.behaviour.belt.TransportedItemS
 import com.simibubi.create.foundation.tileEntity.behaviour.belt.TransportedItemStackHandlerBehaviour.TransportedResult;
 import com.simibubi.create.foundation.utility.BlockHelper;
 import com.simibubi.create.foundation.utility.ServerSpeedProvider;
-
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -30,6 +21,14 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.Function;
+
+import static com.simibubi.create.content.contraptions.relays.belt.transport.BeltTunnelInteractionHandler.flapTunnel;
 
 public class BeltInventory {
 
@@ -82,7 +81,7 @@ public class BeltInventory {
 			.get(BeltBlock.SLOPE) == BeltSlope.HORIZONTAL;
 		float spacing = 1;
 		World world = belt.getWorld();
-		boolean onClient = world.isRemote;
+		boolean onClient = world.isRemote && !belt.isVirtual();
 
 		// resolve ending only when items will reach it this tick
 		Ending ending = Ending.UNRESOLVED;
@@ -105,8 +104,14 @@ public class BeltInventory {
 				movement *= ServerSpeedProvider.get();
 
 			// Don't move if held by processing (client)
-			if (onClient && currentItem.locked)
+			if (world.isRemote && currentItem.locked)
 				continue;
+			
+			// Don't move if held by external components
+			if (currentItem.lockedExternally) {
+				currentItem.lockedExternally = false;
+				continue;
+			}
 
 			// Don't move if other items are waiting in front
 			float currentPos = currentItem.beltPosition;
@@ -149,6 +154,10 @@ public class BeltInventory {
 
 			// Belt Funnels
 			if (BeltFunnelInteractionHandler.checkForFunnels(this, currentItem, nextOffset))
+				continue;
+
+			// Horizontal Crushing Wheels
+			if (BeltCrusherInteractionHandler.checkForCrushers(this, currentItem, nextOffset))
 				continue;
 
 			// Apply Movement
@@ -286,9 +295,7 @@ public class BeltInventory {
 	}
 
 	private Ending resolveEnding() {
-		int lastOffset = beltMovementPositive ? belt.beltLength - 1 : 0;
 		World world = belt.getWorld();
-		BlockPos lastPosition = BeltHelper.getPositionForOffset(belt, lastOffset);
 		BlockPos nextPosition = BeltHelper.getPositionForOffset(belt, beltMovementPositive ? belt.beltLength : -1);
 
 //		if (AllBlocks.BRASS_BELT_FUNNEL.has(world.getBlockState(lastPosition.up())))
@@ -434,5 +441,5 @@ public class BeltInventory {
 	public List<TransportedItemStack> getTransportedItems() {
 		return items;
 	}
-
+	
 }

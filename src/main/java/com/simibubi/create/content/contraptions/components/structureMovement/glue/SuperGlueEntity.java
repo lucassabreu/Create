@@ -1,28 +1,27 @@
 package com.simibubi.create.content.contraptions.components.structureMovement.glue;
 
-import javax.annotation.Nullable;
-
-import org.apache.commons.lang3.Validate;
-
+import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllEntityTypes;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.AllSoundEvents;
+import com.simibubi.create.content.contraptions.base.DirectionalKineticBlock;
 import com.simibubi.create.content.contraptions.components.structureMovement.BlockMovementTraits;
+import com.simibubi.create.content.contraptions.components.structureMovement.bearing.BearingBlock;
+import com.simibubi.create.content.contraptions.components.structureMovement.chassis.AbstractChassisBlock;
 import com.simibubi.create.content.schematics.ISpecialEntityItemRequirement;
 import com.simibubi.create.content.schematics.ItemRequirement;
 import com.simibubi.create.content.schematics.ItemRequirement.ItemUseType;
 import com.simibubi.create.foundation.networking.AllPackets;
+import com.simibubi.create.foundation.utility.AnimationTickHolder;
 import com.simibubi.create.foundation.utility.BlockFace;
-
+import com.simibubi.create.foundation.utility.worldWrappers.WrappedWorld;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.DirectionalBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.Pose;
+import net.minecraft.entity.*;
 import net.minecraft.entity.effect.LightningBoltEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -30,21 +29,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.Direction;
+import net.minecraft.state.BooleanProperty;
+import net.minecraft.util.*;
 import net.minecraft.util.Direction.Axis;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Mirror;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.*;
 import net.minecraft.util.math.RayTraceResult.Type;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
@@ -53,6 +43,9 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.NetworkHooks;
 import net.minecraftforge.fml.network.PacketDistributor;
+import org.apache.commons.lang3.Validate;
+
+import javax.annotation.Nullable;
 
 public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnData, ISpecialEntityItemRequirement {
 
@@ -159,6 +152,9 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 	public boolean isVisible() {
 		if (!isAlive())
 			return false;
+		if (world instanceof WrappedWorld)
+			return true;
+		
 		BlockPos pos = hangingPosition;
 		BlockPos pos2 = pos.offset(getFacingDirection().getOpposite());
 		return isValidFace(world, pos2, getFacingDirection()) != isValidFace(world, pos,
@@ -173,6 +169,8 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 		if (!isValidFace(world, pos2, getFacingDirection())
 			&& !isValidFace(world, pos, getFacingDirection().getOpposite()))
 			return false;
+		if (isSideSticky(world, pos2, getFacingDirection()) || isSideSticky(world, pos, getFacingDirection().getOpposite()))
+			return false;
 		return world.getEntitiesInAABBexcluding(this, getBoundingBox(), e -> e instanceof SuperGlueEntity)
 			.isEmpty();
 	}
@@ -181,11 +179,43 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 		BlockState state = world.getBlockState(pos);
 		if (BlockMovementTraits.isBlockAttachedTowards(world, pos, state, direction))
 			return true;
-		if (!BlockMovementTraits.movementNecessary(world, pos))
+		if (!BlockMovementTraits.movementNecessary(state, world, pos))
 			return false;
 		if (BlockMovementTraits.notSupportive(state, direction))
 			return false;
 		return true;
+	}
+
+	public static boolean isSideSticky(World world, BlockPos pos, Direction direction) {
+		BlockState state = world.getBlockState(pos);
+		if (AllBlocks.STICKY_MECHANICAL_PISTON.has(state))
+			return state.get(DirectionalKineticBlock.FACING) == direction;
+
+		if (AllBlocks.STICKER.has(state))
+			return state.get(DirectionalBlock.FACING) == direction;
+		
+		if (state.getBlock() == Blocks.SLIME_BLOCK)
+			return true;
+		if (state.getBlock() == Blocks.HONEY_BLOCK)
+			return true;
+		
+		if (AllBlocks.CART_ASSEMBLER.has(state))
+			return Direction.UP == direction;
+
+		if (AllBlocks.GANTRY_CARRIAGE.has(state))
+			return state.get(DirectionalKineticBlock.FACING) == direction;
+
+		if (state.getBlock() instanceof BearingBlock) {
+			return state.get(DirectionalKineticBlock.FACING) == direction;
+		}
+
+		if (state.getBlock() instanceof AbstractChassisBlock) {
+			BooleanProperty glueableSide = ((AbstractChassisBlock) state.getBlock()).getGlueableSide(state, direction);
+			if (glueableSide == null) return false;
+			return state.get(glueableSide);
+		}
+
+		return false;
 	}
 
 	@Override
@@ -251,7 +281,7 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 
 	@Override
 	public ActionResultType processInitialInteract(PlayerEntity player, Hand hand) {
-		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
+		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
 			triggerPlaceBlock(player, hand);
 		});
 		return ActionResultType.CONSUME;
@@ -267,7 +297,7 @@ public class SuperGlueEntity extends Entity implements IEntityAdditionalSpawnDat
 		ClientPlayerEntity cPlayer = (ClientPlayerEntity) player;
 		Minecraft mc = Minecraft.getInstance();
 		RayTraceResult ray =
-			cPlayer.pick(mc.playerController.getBlockReachDistance(), mc.getRenderPartialTicks(), false);
+			cPlayer.pick(mc.playerController.getBlockReachDistance(), AnimationTickHolder.getPartialTicks(), false);
 
 		if (!(ray instanceof BlockRayTraceResult))
 			return;

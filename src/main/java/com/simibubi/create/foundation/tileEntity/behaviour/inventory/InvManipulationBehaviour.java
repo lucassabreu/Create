@@ -139,6 +139,13 @@ public class InvManipulationBehaviour extends TileEntityBehaviour {
 		findNewNextTick = true;
 	}
 
+	@Override
+	public void onNeighborChanged(BlockPos neighborPos) {
+		BlockFace targetBlockFace = target.getTarget(getWorld(), tileEntity.getPos(), tileEntity.getBlockState());
+		if (targetBlockFace.getConnectedPos().equals(neighborPos))
+			onHandlerInvalidated(targetCapability);
+	}
+
 	protected void onHandlerInvalidated(LazyOptional<IItemHandler> handler) {
 		findNewNextTick = true;
 		targetCapability = LazyOptional.empty();
@@ -168,7 +175,7 @@ public class InvManipulationBehaviour extends TileEntityBehaviour {
 		return amount;
 	}
 
-	protected void findNewCapability() {
+	public void findNewCapability() {
 		BlockFace targetBlockFace = target.getTarget(getWorld(), tileEntity.getPos(), tileEntity.getBlockState())
 			.getOpposite();
 		BlockPos pos = targetBlockFace.getPos();
@@ -196,13 +203,13 @@ public class InvManipulationBehaviour extends TileEntityBehaviour {
 	public interface InterfaceProvider {
 
 		public static InterfaceProvider towardBlockFacing() {
-			return (w, p, s) -> new BlockFace(p, BlockHelper.hasBlockStateProperty(s, BlockStateProperties.FACING) ? s.get(BlockStateProperties.FACING)
+			return (w, p, s) -> new BlockFace(p, s.contains(BlockStateProperties.FACING) ? s.get(BlockStateProperties.FACING)
 				: s.get(BlockStateProperties.HORIZONTAL_FACING));
 		}
 
 		public static InterfaceProvider oppositeOfBlockFacing() {
 			return (w, p, s) -> new BlockFace(p,
-				(BlockHelper.hasBlockStateProperty(s, BlockStateProperties.FACING) ? s.get(BlockStateProperties.FACING)
+				(s.contains(BlockStateProperties.FACING) ? s.get(BlockStateProperties.FACING)
 					: s.get(BlockStateProperties.HORIZONTAL_FACING)).getOpposite());
 		}
 

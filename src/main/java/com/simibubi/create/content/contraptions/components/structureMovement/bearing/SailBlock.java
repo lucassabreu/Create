@@ -5,7 +5,6 @@ import com.simibubi.create.AllShapes;
 import com.simibubi.create.foundation.block.ProperDirectionalBlock;
 import com.simibubi.create.foundation.utility.DyeHelper;
 import com.simibubi.create.foundation.utility.Iterate;
-import com.simibubi.create.foundation.utility.VecHelper;
 import com.simibubi.create.foundation.utility.placement.IPlacementHelper;
 import com.simibubi.create.foundation.utility.placement.PlacementHelpers;
 import com.simibubi.create.foundation.utility.placement.PlacementOffset;
@@ -64,27 +63,9 @@ public class SailBlock extends ProperDirectionalBlock {
 	public ActionResultType onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockRayTraceResult ray) {
 		ItemStack heldItem = player.getHeldItem(hand);
 
-		if (AllBlocks.SAIL.isIn(heldItem) || AllBlocks.SAIL_FRAME.isIn(heldItem)) {
-			IPlacementHelper placementHelper = PlacementHelpers.get(placementHelperId);
-			PlacementOffset offset = placementHelper.getOffset(world, state, pos, ray);
-
-			if (!offset.isReplaceable(world))
-				return ActionResultType.PASS;
-
-			offset.placeInWorld(world, ((BlockItem) heldItem.getItem()).getBlock().getDefaultState(), player, heldItem);
-
-			/*BlockState blockState = ((BlockItem) heldItem.getItem()).getBlock()
-					.getDefaultState()
-					.with(FACING, state.get(FACING));
-			BlockPos offsetPos = new BlockPos(offset.getPos());
-			if (!world.isRemote && world.getBlockState(offsetPos).getMaterial().isReplaceable()) {
-				world.setBlockState(offsetPos, blockState);
-				if (!player.isCreative())
-					heldItem.shrink(1);
-			}*/
-
-			return ActionResultType.SUCCESS;
-		}
+		IPlacementHelper placementHelper = PlacementHelpers.get(placementHelperId);
+		if (placementHelper.matchesItem(heldItem))
+			return placementHelper.getOffset(player, world, state, pos, ray).placeInWorld(world, (BlockItem) heldItem.getItem(), player, hand, ray);
 
 		if (heldItem.getItem() instanceof ShearsItem) {
 			if (!world.isRemote)
@@ -201,10 +182,10 @@ public class SailBlock extends ProperDirectionalBlock {
 	}
 
 	private void bounce(Entity p_226860_1_) {
-		Vector3d vec3d = p_226860_1_.getMotion();
-		if (vec3d.y < 0.0D) {
+		Vector3d Vector3d = p_226860_1_.getMotion();
+		if (Vector3d.y < 0.0D) {
 			double d0 = p_226860_1_ instanceof LivingEntity ? 1.0D : 0.8D;
-			p_226860_1_.setMotion(vec3d.x, -vec3d.y * (double) 0.26F * d0, vec3d.z);
+			p_226860_1_.setMotion(Vector3d.x, -Vector3d.y * (double) 0.26F * d0, Vector3d.z);
 		}
 
 	}
@@ -222,7 +203,7 @@ public class SailBlock extends ProperDirectionalBlock {
 		}
 
 		@Override
-		public PlacementOffset getOffset(World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
+		public PlacementOffset getOffset(PlayerEntity player, World world, BlockState state, BlockPos pos, BlockRayTraceResult ray) {
 			List<Direction> directions = IPlacementHelper.orderedByDistanceExceptAxis(pos, ray.getHitVec(), state.get(SailBlock.FACING).getAxis(), dir -> world.getBlockState(pos.offset(dir)).getMaterial().isReplaceable());
 
 			if (directions.isEmpty())
@@ -230,11 +211,6 @@ public class SailBlock extends ProperDirectionalBlock {
 			else {
 				return PlacementOffset.success(pos.offset(directions.get(0)), s -> s.with(FACING, state.get(FACING)));
 			}
-		}
-
-		@Override
-		public void renderAt(BlockPos pos, BlockState state, BlockRayTraceResult ray, PlacementOffset offset) {
-			IPlacementHelper.renderArrow(VecHelper.getCenterOf(pos), VecHelper.getCenterOf(offset.getPos()), state.get(FACING));
 		}
 	}
 }
